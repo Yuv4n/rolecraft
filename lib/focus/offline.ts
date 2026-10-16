@@ -23,7 +23,7 @@ function matchTerm(text: string, term: string): boolean {
 
 const strip = (line: string) => line.replace(BULLET, '').trim();
 
-type Scored = {family: RoleFamily; score: number; rank: number; touched: {req: RoleRequirement; terms: string[]; line?: string}[]};
+type Scored = {family: RoleFamily; score: number; rank: number; touched: {req: RoleRequirement; terms: string[]; line?: string; listOnly?: boolean}[]};
 
 function profileLines(p: Profile): string[] {
   return [p.cv, p.projects, p.interests]
@@ -32,6 +32,9 @@ function profileLines(p: Profile): string[] {
     .map((l) => l.trim())
     .filter((l) => strip(l).length >= 12);
 }
+
+// A comma-separated skills list matches many terms but says nothing about what was done.
+const isList = (l: string) => (l.match(/,/g) ?? []).length >= 3 && !/[.;:]/.test(l);
 
 function score(family: RoleFamily, lines: string[], text: string): Scored {
   let total = 0;
@@ -44,22 +47,21 @@ function score(family: RoleFamily, lines: string[], text: string): Scored {
     }
     total += 1 + Math.min(1, (terms.length - 1) * 0.25);
     // A comma-separated skills list matches many terms but says nothing about what was done, so it ranks last.
-    const isList = (l: string) => (l.match(/,/g) ?? []).length >= 3 && !/[.;:]/.test(l);
     const best = lines
       .map((l) => ({l, hits: req.terms.filter((t) => matchTerm(l, t)).length}))
       .filter((x) => x.hits > 0)
       .map((x) => ({l: x.l, n: isList(x.l) ? 0.4 : x.hits + (/\d/.test(x.l) ? 0.5 : 0) + (BULLET.test(x.l) ? 0.25 : 0)}))
       .sort((a, b) => b.n - a.n)[0];
-    touched.push({req, terms, line: best?.l});
+    touched.push({req, terms, line: best?.l, listOnly: best ? isList(best.l) : false});
   }
   // A job title that already appears in the text is strong evidence. It affects ranking only.
   const titleBonus = family.searchTitles.some((t) => matchTerm(text, t)) ? 2 : 0;
   return {family, score: total, rank: total + titleBonus, touched};
 }
 
-function strengthOf(terms: string[], line?: string): Strength {
+function strengthOf(terms: string[], line?: string, listOnly?: boolean): Strength {
   if (!terms.length || !line) return 'none';
-  return terms.length >= 2 ? 'strong' : 'partial';
+  return terms.length >= 2 && !listOnly ? 'strong' : 'partial';
 }
 
 function buildDirection(s: Scored, tier: Tier): Direction | null {
@@ -75,7 +77,7 @@ function buildDirection(s: Scored, tier: Tier): Direction | null {
   }
   if (!reasons.length) return null;
   const gaps: Gap[] = s.touched.map((t) => {
-    const strength = strengthOf(t.terms, t.line);
+    const strength = strengthOf(t.terms, t.line, t.listOnly);
     return {
       requirement: t.req.text,
       strength,
@@ -201,7 +203,7 @@ export function outreachOffline(profile: Profile, direction: Direction, input: O
     .sort((a, b) => b.n - a.n)[0];
   if (!bullet) throw new Error('The CV has no line long enough to quote.');
   const first = profile.cv.split('\n')[0]?.trim() ?? '';
-  const name = first.length > 0 && first.length < 40 && !/[@\d]/.test(first) ? first : '';
+  const name = first.length > 0 && first.split(/\s+/).length <= 4 && !/[@\d]/.test(first) && !/curriculum|resume|r\u00e9sum\u00e9|\bcv\b/i.test(first) ? first : '';
   const rawTopic = direction.gaps[0]?.requirement ?? direction.title;
   // Lowercase the first letter unless it starts an acronym such as SQL.
   const topic = /^[A-Z][a-z]/.test(rawTopic) ? rawTopic.replace(/^./, (c) => c.toLowerCase()) : rawTopic;

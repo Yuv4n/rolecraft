@@ -56,9 +56,17 @@ The orchestrator is ordinary code that decides order and parallelism. The agents
 
 ### Grounding
 
-Quotes are checked in code, not trusted (`lib/focus/grounding.ts`). Every quote a model returns must appear verbatim, after whitespace and bullet normalisation, in the user's own text. A rewritten CV line may not add a number or a name that is not in the original and may not drop a number. An email may not contain a number or a name that is not in the CV, projects or the pasted company text. A claim that fails is removed, and a strength rating that cannot show a verified quote falls back to none. A rejected answer is retried once with the reasons. If nothing verifiable remains the step fails with a message instead of showing unverified text. The How this was produced panel shows each agent, its model, how many items it kept and how many were removed.
+Quotes are checked in code, not trusted (`lib/focus/grounding.ts`).
 
-The role list, the plan arithmetic and the job titles shown come from code, not from the model. Requests from the browser are re-validated on the server and the direction is rebuilt from the curated list.
+- Every quote a model returns must appear verbatim, after whitespace, bullet and case normalisation, inside one bullet or paragraph of the user's own text. A quote cannot span two bullets, and a minus sign in front of a number is kept.
+- A rewritten CV line must replace one whole line, must be a single line, may not add a number (digits in any script, or words such as "five" or "double") and may not drop one. It may not contain any content word that is not in the original line, apart from a short list of replacement verbs such as built, led or supported. This is stricter than the capitalisation check it replaced, which let lowercase tools and seniority words through.
+- Summaries, transfer notes and explanations are checked for numbers, names and links that are not in the user's text or the curated role description. A failing one is replaced with the curated text.
+- An email may not contain a number, name, link or address that is not in the CV, the projects or the pasted company text. Every sentence except the greeting, the sign-off and a closing question must be listed as a claim, and each claim must restate most of its own quote.
+- A claim that fails is removed. A strength rating that cannot show a verified quote falls back to none. A rejected answer is retried once with the reasons. If nothing verifiable remains the step fails with a message instead of showing unverified text.
+
+The How this was produced panel shows each agent, its model, how many items it kept and how many were removed. Quote checking proves that a quote exists in the user's text. A quote may be a fragment of a longer sentence, and it does not prove that the model drew the right conclusion from it.
+
+The role list, the plan arithmetic and the job titles shown come from code, not from the model. Requests from the browser are re-validated on the server. The direction is rebuilt from the curated list, and its evidence quotes are re-checked against the profile sent with the request.
 
 ### Offline engine
 
@@ -68,7 +76,7 @@ Without a key, or if the user declines to send text, `lib/focus/offline.ts` prod
 
 CV files are read in the browser and never uploaded. Extracted text is sent to the server only for live analysis, only after the user ticks the consent screen that shows exactly what will be sent, and only in the request bodies for the analysis. The server forwards that text to the Anthropic API, does not log request or response bodies, stores nothing and has no database. Refreshing the page clears the workspace. The exports are generated locally with docx and jsPDF.
 
-All extracted content is rendered as text. Text from a CV, a job page or a company page is placed inside delimited data blocks, any closing tags inside it are neutralised, and the agents are told never to follow instructions found there. Output is accepted only in the expected schema.
+All extracted content is rendered as text. Text from a CV, a job page or a company page is placed inside delimited data blocks. Every angle bracket inside it is replaced with a look-alike character, so it cannot open or close a tag, and the agents are told never to follow instructions found there. Output is accepted only in the expected schema.
 
 ## Known limits
 
@@ -80,9 +88,9 @@ There are no recorded sample results. With a key, the sample buttons call the mo
 
 Roles are drawn from a curated list of about 30 families. The app does not search live job listings. It suggests job titles to search for.
 
-The consent flag on `/api/focus` is set by the browser and the server only checks that it is present. `/api/focus` and `/api/job` have no authentication and no rate limiting. A key on a public deployment can be used by anyone who finds the URL. Keep the site owner-private, or add rate limiting and access control, before sharing it widely.
+The consent flag on `/api/focus` is set by the browser and the server only checks that it is present. The route accepts same-origin requests only, caps the body at 120 KB (checked while reading, not after) and allows 12 requests a minute per client address. Each Worker isolate keeps its own count, so this slows casual abuse and is not a substitute for platform rate limiting. There is no authentication, and a `package` request makes two model calls. A key on a public deployment can still be used by anyone who finds the URL. Keep the site owner-private, or add access control and platform rate limiting, before sharing it widely. `/api/job` has no rate limit.
 
-Job extraction reads static HTML. Login walls, redirects, JavaScript-only job boards and bot protection require pasting the description. The fetch route has no rate limiter and DNS checking is not a substitute for a production egress proxy with DNS pinning.
+Job extraction reads static HTML. Login walls, redirects, JavaScript-only job boards and bot protection require pasting the description. DNS checking in the fetch route is not a substitute for a production egress proxy with DNS pinning.
 
 Scanned PDFs need OCR outside this app. Complex layouts may extract out of order. Exports use a plain single-column layout. The PDF uses built-in Helvetica and supports Western text best. Review exports before sending. There are no accounts, history or persistent uploads. The hosted Site is owner-private by default.
 

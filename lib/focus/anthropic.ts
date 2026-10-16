@@ -5,6 +5,7 @@ import type {AgentCall} from './orchestrator.ts';
 
 export class ModelRefusal extends Error {}
 export class ModelTruncated extends Error {}
+export class ModelBadOutput extends Error {}
 
 export function makeAnthropicCall(apiKey: string): AgentCall {
   const client = new Anthropic({apiKey, maxRetries: 1, timeout: 150_000});
@@ -24,6 +25,10 @@ export function makeAnthropicCall(apiKey: string): AgentCall {
     if (response.stop_reason === 'max_tokens') throw new ModelTruncated();
     const block = response.content.find((b) => b.type === 'text');
     if (!block || block.type !== 'text') throw new Error('empty response');
-    return JSON.parse(block.text) as unknown;
+    try {
+      return JSON.parse(block.text) as unknown;
+    } catch {
+      throw new ModelBadOutput();
+    }
   };
 }

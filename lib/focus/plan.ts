@@ -17,8 +17,8 @@ export function weeksUntil(applyBy: string, today: Date = new Date()): number {
  * lower-priority tasks are still tried.
  */
 export function fitPlan(tasks: PlanTask[], hoursPerWeek: number, weeks: number): Plan {
-  const perWeek = Math.max(1, Math.round(hoursPerWeek));
-  const span = Math.max(1, Math.round(weeks));
+  const perWeek = Number.isFinite(hoursPerWeek) ? Math.max(1, Math.round(hoursPerWeek)) : 1;
+  const span = Number.isFinite(weeks) ? Math.max(1, Math.round(weeks)) : 1;
   const budgetHours = perWeek * span;
   const reserveHours = Math.min(budgetHours, Math.max(2, Math.round(budgetHours * 0.15)));
   let remaining = budgetHours - reserveHours;
@@ -27,11 +27,13 @@ export function fitPlan(tasks: PlanTask[], hoursPerWeek: number, weeks: number):
   const deferred: Plan['deferred'] = [];
   let cursor = 0; // hours already placed on the calendar
   for (const task of ordered) {
-    const hours = Math.max(0.5, task.hours);
+    const hours = Math.max(0.5, Math.round(task.hours * 2) / 2);
     if (hours > remaining) {
       deferred.push({
         task,
-        reason: remaining <= 0
+        reason: budgetHours - reserveHours <= 0
+          ? `Your whole budget is no larger than the ${reserveHours}h held for the tailored CV and outreach. Add hours or move the date.`
+          : remaining <= 0
           ? `No hours left after higher-priority tasks. This needs ${hours}h.`
           : `Needs ${hours}h and only ${remaining}h remain after higher-priority tasks and the CV and outreach reserve.`,
       });

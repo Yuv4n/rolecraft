@@ -1,5 +1,6 @@
 import type {Direction, Evidence, FocusRequest, Gap, OutreachInput, Profile, Strength, Tier} from './types.ts';
 import {roleById} from './roles.ts';
+import {normalise, quoteInSource} from './grounding.ts';
 
 export const LIMITS = {cv: 30000, projects: 4000, interests: 1500, page: 20000, name: 120, total: 120000};
 
@@ -58,6 +59,26 @@ export function parseDirection(v: unknown): Direction {
   };
 }
 
+/**
+ * The browser sends the direction back, so the server re-checks it against the profile it also received:
+ * evidence quotes must be in the person's text and gaps must be the role family's own requirements.
+ */
+export function groundDirection(d: Direction, p: Profile): Direction {
+  const family = roleById.get(d.roleFamilyId);
+  if (!family) throw new BadRequest('Unknown role family.');
+  const sources = [p.cv, p.projects, p.interests];
+  const allowed = new Map(family.requirements.map((r) => [normalise(r.text), r.text]));
+  const keep = (items: Evidence[]) => items.filter((e) => quoteInSource(e.quote, ...sources));
+  const gaps: Gap[] = d.gaps.flatMap((g) => {
+    const requirement = allowed.get(normalise(g.requirement));
+    if (!requirement) return [];
+    const evidence = keep(g.evidence);
+    const strength: Strength = g.strength !== 'none' && !evidence.length ? 'none' : g.strength;
+    return [{requirement, strength, evidence: strength === 'none' ? [] : evidence}];
+  });
+  return {...d, reasons: keep(d.reasons), gaps};
+}
+
 export function parseOutreachInput(v: unknown): OutreachInput {
   if (!isObj(v)) throw new BadRequest('Missing company details.');
   const input = {
@@ -78,11 +99,11 @@ export function parseRequest(body: unknown): FocusRequest {
     case 'discover':
       return {action: 'discover', consent: true, profile};
     case 'package':
-      return {action: 'package', consent: true, profile, direction: parseDirection(body.direction)};
+      return {action: 'package', consent: true, profile, direction: groundDirection(parseDirection(body.direction), profile)};
     case 'outreach':
       return {
         action: 'outreach', consent: true, profile,
-        direction: parseDirection(body.direction),
+        direction: groundDirection(parseDirection(body.direction), profile),
         input: parseOutreachInput(body.input),
       };
     default:

@@ -9,7 +9,7 @@ import type {
   Direction, Email, EmailClaim, Evidence, Gap, OutreachInput, PlanTask, Profile, Question, Rewrite,
   Strength, TailorResult, TaskKind, Tier, TraceEntry,
 } from './types.ts';
-import {checkRewrite, normalise, quoteInSource, unseenNumbers, unseenProperNouns} from './grounding.ts';
+import {checkRewrite, contentWords, normalise, proseIssues, quoteInSource, unseenLinks, unseenNumbers, unseenProperNouns} from './grounding.ts';
 import {roleById, taxonomyForPrompt} from './roles.ts';
 import {weeksUntil} from './plan.ts';
 
@@ -54,10 +54,18 @@ Hard rules:
 - Do not invent employers, job titles, qualifications, tools, numbers, dates or outcomes. If the input does not show something, say that it is missing.
 - Write plain, declarative sentences. No bold, no filler, no praise, no hype.`;
 
-/** Wraps untrusted text in a tag and defuses any closing tag the text itself contains. */
+/**
+ * Wraps untrusted text in a tag. Every angle bracket inside the text is replaced with a look-alike
+ * character, so nothing in it can open or close a tag. The grounding check maps them back.
+ */
 function tag(name: string, body: string): string {
-  const safe = body.replace(/<\/?\s*(cv|projects|interests|page|evidence|direction)\b[^>]*>/gi, '[tag removed]');
+  const safe = body.replace(/</g, '\u2039').replace(/>/g, '\u203a');
   return `<${name}>\n${safe}\n</${name}>`;
+}
+
+/** Single-line version for short fields such as a company name. */
+function field(name: string, value: string): string {
+  return tag(name, value.replace(/[\r\n\u2028\u2029]+/g, ' ').slice(0, 200));
 }
 
 function profileBlock(p: Profile): string {
@@ -75,14 +83,23 @@ const evidenceItem = {
   additionalProperties: false,
 };
 
-function checkEvidence(items: unknown, sources: string[], problems: string[], label: string): {kept: Evidence[]; dropped: number} {
+const FALLBACK_WHY = 'Relevant to this role.';
+
+function checkEvidence(items: unknown, sources: string[], problems: string[], label: string, vocab: string[] = []): {kept: Evidence[]; dropped: number} {
   const kept: Evidence[] = [];
   let dropped = 0;
   for (const raw of list(items)) {
     const quote = text(isObj(raw) ? raw.quote : '', 600);
-    const why = text(isObj(raw) ? raw.why : '', 400);
-    if (quote && quoteInSource(quote, ...sources)) kept.push({quote, why});
-    else {
+    let why = text(isObj(raw) ? raw.why : '', 400);
+    if (quote && quoteInSource(quote, ...sources)) {
+      const issues = proseIssues(why, [...sources, ...vocab]);
+      if (issues.length) {
+        problems.push(`${label}: explanation rejected (${issues.join('; ')})`);
+        dropped++;
+        why = FALLBACK_WHY;
+      }
+      kept.push({quote, why});
+    } else {
       dropped++;
       problems.push(`${label}: quote not found in the input: "${quote.slice(0, 80)}"`);
     }
@@ -206,7 +223,8 @@ The person has ${p.hoursPerWeek} hours a week for about ${weeks} weeks, so keep 
           dropped++;
           continue;
         }
-        const reasons = checkEvidence(item.reasons, sources, problems, family.id);
+        const vocab = [family.title, family.summary, ...family.requirements.map((r) => r.text), ...family.searchTitles];
+        const reasons = checkEvidence(item.reasons, sources, problems, family.id, vocab);
         dropped += reasons.dropped;
         if (!reasons.kept.length) {
           problems.push(`${family.id}: no reason with a verifiable quote`);
@@ -224,7 +242,7 @@ The person has ${p.hoursPerWeek} hours a week for about ${weeks} weeks, so keep 
             continue;
           }
           const claimed: Strength = g.strength === 'strong' || g.strength === 'partial' ? g.strength : 'none';
-          const ev = checkEvidence(g.evidence, sources, problems, `${family.id} gap`);
+          const ev = checkEvidence(g.evidence, sources, problems, `${family.id} gap`, vocab);
           dropped += ev.dropped;
           // A strength that cannot show a verified quote falls back to none rather than being trusted.
           const strength: Strength = claimed !== 'none' && ev.kept.length === 0 ? 'none' : claimed;
@@ -236,6 +254,20 @@ The person has ${p.hoursPerWeek} hours a week for about ${weeks} weeks, so keep 
           continue;
         }
         const tier: Tier = item.tier === 'adjacent' || item.tier === 'stretch' ? item.tier : 'primary';
+        let summary = text(item.summary, 600);
+        const summaryIssues = proseIssues(summary, [...sources, ...vocab]);
+        if (summaryIssues.length || !summary) {
+          problems.push(`${family.id}: summary rejected (${summaryIssues.join('; ') || 'empty'})`);
+          dropped++;
+          summary = family.summary;
+        }
+        let transferNote = tier === 'primary' ? '' : text(item.transferNote, 600);
+        const noteIssues = proseIssues(transferNote, [...sources, ...vocab]);
+        if (noteIssues.length) {
+          problems.push(`${family.id}: transfer note rejected (${noteIssues.join('; ')})`);
+          dropped++;
+          transferNote = '';
+        }
         seen.add(family.id);
         out.push({
           id: family.id,
@@ -243,10 +275,10 @@ The person has ${p.hoursPerWeek} hours a week for about ${weeks} weeks, so keep 
           title: family.title,
           field: family.field,
           tier,
-          summary: text(item.summary, 600),
+          summary,
           reasons: reasons.kept.slice(0, 3),
           gaps,
-          transferNote: tier === 'primary' ? undefined : text(item.transferNote, 600) || undefined,
+          transferNote: transferNote || undefined,
           searchTitles: family.searchTitles,
         });
       }
@@ -360,7 +392,7 @@ function cvTailor(p: Profile): Spec<TailorResult> {
     system: `${COMMON}
 
 Your job: tailor the CV for the chosen direction by changing wording only.
-- rewrites: up to eight CV lines. original is the full line copied exactly. revised keeps exactly the same facts and uses clearer, stronger wording closer to how the direction describes the work. Allowed: reordering clauses, replacing weak openers such as "Responsible for", "Worked on" or "Helped with" with a verb of the same meaning, removing filler, and using the direction's own terminology where it is accurate. Forbidden: any number, name, tool, outcome, scope or seniority that is not in the original line. Keep every number from the original. Keep the revision close to the original length. why: one short sentence on what changed.
+- rewrites: up to eight CV lines. original is the whole line copied exactly. revised must be a single line. It keeps exactly the same facts and uses only words that already appear in the original line, plus a replacement verb when you swap out a weak opener such as "Responsible for", "Worked on" or "Helped with" (for example built, led, ran, managed, created, supported or contributed). Allowed: reordering clauses, dropping filler words, and tightening. Forbidden: any new number (digits or words such as "five" or "double"), name, tool, outcome, scope, seniority or technical term that is not in the original line. Keep every number from the original. Keep the revision close to the original length. If you cannot improve a line without adding words, leave it out. why: one short sentence on what changed.
 - emphasis: up to six CV lines, copied exactly, that matter most for this direction. The app moves them first within their group of bullets.
 - questions: up to four. For a CV line where one missing fact would make the bullet clearly stronger for this direction, such as the size of a team or how success was measured, ask the person that specific question. line is the CV line copied exactly. Do not answer the question yourself.`,
     schema: {
@@ -444,7 +476,8 @@ function outreachWriter(p: Profile, d: Direction, input: OutreachInput): Spec<Em
 Your job: draft a short cold email, under 130 words, from the person to ${input.contact ? 'the named contact' : 'someone on the team'} at the company.
 - Include exactly one fact about the person's work, taken from the CV or projects, and exactly one fact about the company, taken from the <page> text. Do not state anything about the company that the page does not say.
 - Do not state any number, tool, employer or outcome that is not in the CV or projects.
-- List every factual claim in claims. sentence is the exact sentence as it appears in body. source is "cv" (CV or projects) or "page". quote is copied exactly from that source.
+- Every sentence in the email, except the greeting, the sign-off and the closing question, must be listed in claims. sentence is the exact sentence as it appears in body, and it must restate its quote without adding anything. source is "cv" (CV or projects) or "page". quote is copied exactly from that source.
+- Do not include links or email addresses unless they appear in the CV or the page.
 - End with one small, specific question the person is curious about that relates to the page. Do not ask for a job, a referral or a long meeting.
 - Sign off with the person's name taken from the top of the CV. If no name is evident, sign off without one.
 - The subject is specific and under 60 characters.`,
@@ -480,10 +513,18 @@ Your job: draft a short cold email, under 130 words, from the person to ${input.
         const sentence = text(c.sentence, 600);
         const found = source === 'page' ? quoteInSource(quote, page) : quoteInSource(quote, ...mine);
         const inBody = sentence.length > 0 && normalise(body).includes(normalise(sentence));
-        if (found && inBody) claims.push({sentence, source, quote});
+        // A claim must restate its quote. Most of its content words have to come from the quote itself.
+        const words = contentWords(sentence);
+        const inQuote = new Set(contentWords(quote));
+        const restates = words.length > 0 && words.filter((w) => inQuote.has(w)).length / words.length >= 0.5;
+        if (found && inBody && restates) claims.push({sentence, source, quote});
         else {
           dropped++;
-          problems.push(!found ? `claim quote not found in the ${source} text: "${quote.slice(0, 80)}"` : `claim sentence is not in the email body: "${sentence.slice(0, 80)}"`);
+          problems.push(
+            !found ? `claim quote not found in the ${source} text: "${quote.slice(0, 80)}"`
+            : !inBody ? `claim sentence is not in the email body: "${sentence.slice(0, 80)}"`
+            : `claim sentence says more than its quote supports: "${sentence.slice(0, 80)}"`,
+          );
         }
       }
       if (!subject || !body) problems.push('subject and body are required');
@@ -491,6 +532,11 @@ Your job: draft a short cold email, under 130 words, from the person to ${input.
       if (!claims.some((c) => c.source === 'page')) problems.push('the email needs at least one verified claim from the company text');
       const numbers = unseenNumbers(`${subject}\n${body}`, ...mine, page);
       if (numbers.length) problems.push(`numbers not found in the CV, projects or company text: ${numbers.join(', ')}`);
+      const links = unseenLinks(`${subject}\n${body}`, ...mine, page);
+      if (links.length) problems.push(`links or addresses not found in the CV, projects or company text: ${links.join(', ')}`);
+      const covered = (st: string) => claims.some((c) => normalise(c.sentence).includes(normalise(st)) || normalise(st).includes(normalise(c.sentence)));
+      const loose = body.split(/(?<=[.!?])\s+|\n+/).map((x) => x.trim()).filter((x) => x.split(/\s+/).length > 4 && !x.endsWith('?') && !covered(x));
+      if (loose.length) problems.push(`these sentences make statements that are not listed as claims: ${loose.map((x) => `"${x.slice(0, 60)}"`).join('; ')}`);
       const names = unseenProperNouns(`${subject}\n${body}`, [...mine, page], allowedNames);
       if (names.length) problems.push(`names not found in the CV, projects or company text: ${names.join(', ')}`);
       const ok = problems.length === 0 && subject && body;
@@ -553,7 +599,7 @@ export function createOrchestrator(cfg: OrchestratorConfig) {
     },
 
     async outreach(profile: Profile, direction: Direction, input: OutreachInput): Promise<{email: Email; trace: TraceEntry[]}> {
-      const user = `${profileBlock(profile)}\n\n${directionBlock(direction)}\n\nCompany: ${input.company}\nContact: ${input.contact || '(not given)'}\n\n${tag('page', input.page)}`;
+      const user = `${profileBlock(profile)}\n\n${directionBlock(direction)}\n\n${field('company', input.company)}\n${field('contact', input.contact || '(not given)')}\n\n${tag('page', input.page)}`;
       const writer = await run(outreachWriter(profile, direction, input), user);
       return {email: writer.value, trace: [writer.trace]};
     },
