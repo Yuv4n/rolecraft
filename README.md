@@ -2,7 +2,7 @@
 
 A CV studio that runs entirely in the browser. Load a CV, then explore careers, tailor it to a role, find gaps, or get a scored review. Every suggestion points back to a line you wrote, and the tool asks you for facts instead of inventing them.
 
-[Live demo](https://rolecraft.yuv4n-apps.workers.dev/) (click "Try a sample", no sign-in needed)
+Run it locally in a minute (see below) and click "Try a sample". There is no hosted demo.
 
 ![Review workflow: a scored CV review with six weighted groups](docs/review.png)
 
@@ -53,7 +53,7 @@ No environment variables are needed.
 
 ## Hosting and cost
 
-The demo is a Cloudflare Worker with no bindings, no secrets and no variables, and Workers Logs is switched off in `vite.config.ts`. It makes no outbound requests: the live job-feed route (`/api/jobs`) answers 410 unless `JOB_FEEDS_ENABLED=true` is set, and the URL-fetch route (`/api/job`) is permanently disabled. Deployment needs a Cloudflare login (`npm run build && npm run deploy:cloudflare`). The optional workflow `.github/workflows/deploy.yml` stays inactive unless a token and `CLOUDFLARE_DEPLOY_ENABLED` are configured in the repository.
+There is no hosted demo, and the project is set up so that running one would cost nothing. The Worker config has no bindings, secrets or variables and Workers Logs is switched off in `vite.config.ts`. The app makes no outbound requests: the live job-feed route (`/api/jobs`) answers 410 unless `JOB_FEEDS_ENABLED=true` is set, and the URL-fetch route (`/api/job`) is permanently disabled. To host it yourself, log in with `npx wrangler login`, then run `npm run build && npm run deploy:cloudflare`. The optional workflow `.github/workflows/deploy.yml` stays inactive unless a token and `CLOUDFLARE_DEPLOY_ENABLED` are set in the repository.
 
 ## Known limits
 
