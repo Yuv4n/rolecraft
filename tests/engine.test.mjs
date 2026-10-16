@@ -1,0 +1,16 @@
+import assert from 'node:assert/strict';
+import {sampleCV,sampleJob,analyse,tailor,rate,has} from '../lib/engine.ts';
+const a=analyse(sampleCV,sampleJob),t=tailor(sampleCV,sampleJob);
+assert(a.gaps.includes('dbt'));
+assert(!a.matched.includes('dbt'));
+assert(a.requirements.some(r=>r.category==='Preferred experience'));
+assert(t.includes('31% to 39%'));
+assert(t.includes('• Built SQL dashboards'));
+assert(!t.includes('dbt'));
+assert.equal(t.split('\n').filter(l=>l.startsWith('•')).length,6);
+assert(rate(t,sampleJob)[2].score>rate(sampleCV,sampleJob)[2].score);
+assert(has('SQL and stakeholders','stakeholder'));
+assert(!has('NoSQL','SQL'));
+assert.equal(analyse('Unrelated text','Unrelated role').matched.length,0);
+assert.equal(rate('',sampleJob)[0].score,0);
+console.log('PASS: 12 grounding, extraction-category, matching and rubric assertions');
