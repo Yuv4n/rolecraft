@@ -44,7 +44,7 @@ Scanned PDFs need OCR elsewhere. The vocabulary covers product, analytics, opera
 
 ## Hackathon
 
-Rolecraft began as a hackathon project. The [pitch video and slides](docs/hackathon/) show an earlier variant with live AI analysis, which is archived at the tag `archive/hackathon-live-analysis` and not part of `main`.
+Rolecraft began as a hackathon project. The [pitch deck](docs/hackathon/rolecraft-pitch-deck.pdf) shows an earlier variant with live AI analysis, which is archived at the tag `archive/hackathon-live-analysis` and not part of `main`.
 
 ## Licence
 
