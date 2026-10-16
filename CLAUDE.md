@@ -11,12 +11,12 @@ Read README.md for setup, architecture, privacy constraints and known limitation
 
 ## Commands
 
-- Node 22.13+ (24 recommended).
+- Node 24+; use `.node-version`.
 - `npm ci`
 - `npm run dev` (use the printed URL, usually port 5173)
-- `npx tsc --noEmit`
-- `node --experimental-strip-types tests/engine.test.mjs`
-- `npm run build`
+- `npm run check`
+- `npm run benchmark`
+- `npm run build:cloudflare`
 
 No API keys or environment variables are required for the current demo.
 
@@ -24,9 +24,11 @@ No API keys or environment variables are required for the current demo.
 
 - `app/page.tsx`: client flow, extraction, review and exports.
 - `app/globals.css`: responsive interface.
-- `app/api/job/route.ts`: public job URL extraction.
+- `app/api/job/route.ts`: rejects URL extraction in the public demo.
 - `lib/engine.ts`: matching, niche suggestions, conservative tailoring and scoring.
 - `tests/engine.test.mjs`: grounding and rubric checks.
+- `lib/docx-import.ts`: bounded browser DOCX extraction.
+- `lib/draft.ts`: device draft validation.
 
 ## Product constraints
 
