@@ -45,7 +45,7 @@ CV parsing and exports run in the browser. Do not log CV contents or persist the
 
 The offline engine is deterministic with a limited vocabulary. Preserve that disclosure in offline mode. Every quote a model returns must be verified against the user's text in code before it is shown. URL fetching needs production egress controls and rate limiting before public deployment. Do not weaken its existing restrictions.
 
-Keep secrets server-side and outside Git. `.openai/hosting.json` identifies the existing private Sites deployment; do not replace its project ID or publish changes automatically from a normal coding session.
+Keep secrets server-side and outside Git. Never read, print, echo or paste the value of ANTHROPIC_API_KEY or any other secret, and never run `env`, `printenv` or `cat .dev.vars`. Check that a secret is set by its name only. The owner supplies keys through the environment settings or their own machine, not through chat. `.openai/hosting.json` identifies the existing private Sites deployment; do not replace its project ID or publish changes automatically from a normal coding session.
 
 ## Writing
 

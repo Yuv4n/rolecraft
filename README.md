@@ -23,7 +23,15 @@ All optional. With none set, the app runs entirely in the browser using the offl
 - ANTHROPIC_MODEL sets the model for every agent. The default is claude-opus-5-5.
 - FOCUS_MODEL_<AGENT> overrides one agent, for example FOCUS_MODEL_EVIDENCE_READER, FOCUS_MODEL_DIRECTION_MAPPER, FOCUS_MODEL_GAP_PLANNER, FOCUS_MODEL_CV_TAILOR or FOCUS_MODEL_OUTREACH_WRITER. This is how to run the light agents on a cheaper model.
 
-For local development, put these in a `.dev.vars` file in the project root. It is ignored by Git. For a hosted site, set the key as a secret in the hosting project. Never put it in `.openai/hosting.json` or any committed file.
+### Supplying the key without exposing it
+
+Never paste the key into a chat or a committed file. Use one of these:
+
+- Hosted site: set `ANTHROPIC_API_KEY` as a secret in the hosting project's settings. Never put it in `.openai/hosting.json`.
+- Your own machine: run `ANTHROPIC_API_KEY=... npm run dev:live`, or create a `.dev.vars` file in the project root yourself. `scripts/sync-dev-vars.mjs` copies the key from the environment into `.dev.vars` with owner-only permissions and prints variable names only. Git ignores `.dev.vars`.
+- Claude Code cloud session: add `ANTHROPIC_API_KEY` in the environment's settings (cloud environment menu, then Edit), under Network secrets if offered and otherwise as an environment variable, then start a new session and run `npm run dev:live`. The key never has to appear in the conversation, and the repository guidance tells sessions not to read or print it.
+
+The server reads the key only when handling a request. It is never sent to the browser. `GET /api/focus` reveals only whether a key is configured.
 
 ## Checks
 
