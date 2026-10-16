@@ -1,7 +1,7 @@
 import type { Snapshot } from '../cv/types.ts';
 import { nodeText } from '../cv/render.ts';
 import { sectionOf } from '../cv/ops.ts';
-import { has } from '../engine.ts';
+import { supports } from '../engine.ts';
 import { playFor } from './playbook.ts';
 
 export interface RoleDef {
@@ -66,7 +66,7 @@ function evidenceFor(snap: Snapshot, term: string): TermEvidence | null {
   for (const node of Object.values(snap.content.nodes)) {
     if (node.type === 'section') continue;
     const text = nodeText(node, snap.layout);
-    if (!has(text, term)) continue;
+    if (!supports(text, term)) continue;
     const inSkills = node.type === 'skills' || sectionOf(snap, node.id)?.kind === 'skills';
     const hit = { term, nodeId: node.id, quote: text, listedOnly: inSkills };
     if (!inSkills) return hit;

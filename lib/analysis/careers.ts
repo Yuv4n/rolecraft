@@ -2,7 +2,7 @@ import type { Snapshot } from '../cv/types.ts';
 import { children, nodeText, sections } from '../cv/render.ts';
 import { findRoles } from './roles.ts';
 import type { Gap, RoleFit, Readiness, TermEvidence } from './roles.ts';
-import { has } from '../engine.ts';
+import { supports } from '../engine.ts';
 import { sectionOf } from '../cv/ops.ts';
 
 interface RoleSlot { title: string; roleId: string; /** Keywords sent to job boards. Never CV text. */ query: string }
@@ -120,7 +120,7 @@ function domainEvidence(snap: Snapshot, spec: string[]): { shown: TermEvidence[]
     for (const node of Object.values(snap.content.nodes)) {
       if (node.type === 'section') continue;
       const text = nodeText(node, snap.layout);
-      if (!has(text, term)) continue;
+      if (!supports(text, term)) continue;
       const listedOnly = node.type === 'skills' || sectionOf(snap, node.id)?.kind === 'skills';
       if (!hit || (hit.listedOnly && !listedOnly)) hit = { term, nodeId: node.id, quote: text, listedOnly };
     }

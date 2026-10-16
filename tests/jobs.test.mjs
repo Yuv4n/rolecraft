@@ -76,3 +76,18 @@ const ev=plan.paths[0].evidence; assert(ev.length>0&&ev.every(e=>sampleCV.toLowe
 const sorted=[...plan.paths].map(p=>p.fit); assert.deepEqual(sorted,[...sorted].sort((a,b)=>b-a));
 assert(plan.paths[0].industries[0].fit>=plan.paths[0].industries.at(-1).fit);
 console.log('PASS: job feeds, safety rules, ranking and career paths');
+
+// The route is off by default, makes no outbound request, and validates input when switched on.
+const {POST}=await import('../app/api/jobs/route.ts');
+const realFetch=globalThis.fetch;let outbound=0;globalThis.fetch=async()=>{outbound++;throw new Error('blocked')};
+try{
+  const body=JSON.stringify({queries:['data analyst']});
+  const off=await POST(new Request('https://x.test/api/jobs',{method:'POST',body}));
+  assert.equal(off.status,410); assert.equal(outbound,0);
+  process.env.JOB_FEEDS_ENABLED='true';
+  assert.equal((await POST(new Request('https://x.test/api/jobs',{method:'POST',body:'{"queries":[]}'}))).status,400);
+  assert.equal((await POST(new Request('https://x.test/api/jobs',{method:'POST',body:'x'.repeat(5000)}))).status,413);
+  const on=await POST(new Request('https://x.test/api/jobs',{method:'POST',body}));
+  const data=await on.json(); assert.equal(on.status,200); assert(data.sources.every(s=>!s.ok&&s.error==='Could not be reached'),'raw error text must not reach the page');
+}finally{delete process.env.JOB_FEEDS_ENABLED;globalThis.fetch=realFetch}
+console.log('PASS: job route gating');
