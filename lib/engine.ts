@@ -350,8 +350,15 @@ export function tailor(cv: string, job: string | JobModel) {
       });
     }
     // Ambiguous unindented continuation: leave this whole run in source order.
-    const ambiguous =
-      i < lines.length && !!lines[i].trim() && !bulletPattern.test(lines[i]);
+    const next = lines[i]?.trim() ?? "";
+    const sectionBoundary =
+      /^(?:[A-Z][A-Z &/]{2,}:?|(?:work |professional )?experience:?|education:?|qualifications:?|(?:technical |core |key )?skills:?|projects:?|certifications:?|references:?)$/.test(
+        next,
+      ) ||
+      /^(?:(?:work |professional )?experience|education|qualifications|(?:technical |core |key )?skills|projects|certifications|references):?$/i.test(
+        next,
+      );
+    const ambiguous = !!next && !bulletPattern.test(next) && !sectionBoundary;
     if (!ambiguous) run.sort((a, b) => b.score - a.score || a.index - b.index);
     output.push(
       ...run.flatMap((x) =>
