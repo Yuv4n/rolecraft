@@ -13,7 +13,8 @@ Read README.md for setup, architecture, privacy constraints and known limitation
 
 - Node 22.13+ (24 recommended).
 - `npm ci`
-- `npm run dev` (use the printed URL, usually port 5173)
+- `npm run dev` (use the printed URL, usually http://localhost:3000)
+- `npm start` serves a production build made by `npm run build`
 - `npx tsc --noEmit`
 - `node --experimental-strip-types tests/engine.test.mjs`
 - `node --experimental-strip-types tests/focus.test.mjs`
@@ -22,12 +23,12 @@ Read README.md for setup, architecture, privacy constraints and known limitation
 - `npm test` runs all four suites
 - `npm run build`
 
-No API keys or environment variables are required for the demo. Without `ANTHROPIC_API_KEY` the app uses its offline engine. Local secrets go in `.dev.vars`, which Git ignores.
+No API keys or environment variables are required for the demo. Without `ANTHROPIC_API_KEY` the app uses its offline engine. Local secrets go in `.env.local`, which Git ignores.
 
 ## Important files
 
 - `app/page.tsx`: client flow and state. Step screens are in `components/steps` and `components/focus`.
-- `app/api/focus/route.ts`: live analysis route. Handles CV text, so it must never log bodies.
+- `app/api/focus/route.ts`: live analysis route (Next.js route handler on the Node runtime). Handles CV text, so it must never log bodies.
 - `lib/focus/`: types, role list, grounding checks, plan fitting, orchestrator and agents, offline engine.
 - `app/globals.css`: responsive interface.
 - `app/api/job/route.ts`: public job URL extraction.
@@ -45,8 +46,18 @@ CV parsing and exports run in the browser. Do not log CV contents or persist the
 
 The offline engine is deterministic with a limited vocabulary. Preserve that disclosure in offline mode. Every quote a model returns must be verified against the user's text in code before it is shown. URL fetching needs production egress controls and rate limiting before public deployment. Do not weaken its existing restrictions.
 
-Keep secrets server-side and outside Git. Never read, print, echo or paste the value of ANTHROPIC_API_KEY or any other secret, and never run `env`, `printenv` or `cat .dev.vars`. Check that a secret is set by its name only. The owner supplies keys through the environment settings or their own machine, not through chat. `.openai/hosting.json` identifies the existing private Sites deployment; do not replace its project ID or publish changes automatically from a normal coding session.
+Keep secrets server-side and outside Git. Never read, print, echo or paste the value of ANTHROPIC_API_KEY or any other secret, and never run `env`, `printenv` or `cat .env.local`. Check that a secret is set by its name only. The owner supplies keys through the environment settings or their own machine, not through chat. The project runs locally with Next.js. It has no hosted deployment and no platform-specific code, so do not add any, and do not publish anywhere from a normal coding session.
 
 ## Writing
 
 Use plain, declarative prose. Avoid tricolons, formulaic antithesis, em-dash pile-ups and bold highlighting.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->

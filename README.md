@@ -2,7 +2,7 @@
 
 A private hackathon tool that helps someone decide where to focus their career effort. The user gives a CV, optional projects and interests, the hours they can spare each week and the date they want to start applying. Rolecraft returns three directions with quoted evidence and stated gaps, a plan sized to their hours, a CV tailored to the chosen direction, and one outreach email grounded in their own work and a text the company published.
 
-Built with React 19, TypeScript and Vinext on Vite. The server routes deploy to Cloudflare Workers through Sites.
+Built with React 19, TypeScript and Next.js. It runs on your own machine. There is no hosted deployment and no platform-specific code.
 
 ## Run locally
 
@@ -13,13 +13,13 @@ npm ci
 npm run dev
 ```
 
-Open the Local URL printed by Vite, usually http://127.0.0.1:5173. Click Try a sample (a product analyst) or Try a non-tech sample (a nurse moving toward clinical informatics), then continue through the five steps. Moving the hours slider on the plan screen changes what fits and what is deferred. No API key is needed for this: without one the app uses its offline engine.
+Open the Local URL printed by Next.js, usually http://localhost:3000. For a production build, run `npm run build` and then `npm start`. Click Try a sample (a product analyst) or Try a non-tech sample (a nurse moving toward clinical informatics), then continue through the five steps. Moving the hours slider on the plan screen changes what fits and what is deferred. No API key is needed for this: without one the app uses its offline engine.
 
 ## Environment variables
 
 All optional. With none set, the app runs entirely in the browser using the offline engine.
 
-- ANTHROPIC_API_KEY enables live analysis through the Anthropic API. It is read only on the server and must never be given a NEXT_PUBLIC_ or VITE_ prefix.
+- ANTHROPIC_API_KEY enables live analysis through the Anthropic API. It is read only on the server and must never be given a NEXT_PUBLIC_ prefix.
 - ANTHROPIC_WORKSPACE_ID is needed only for a user-level key that is not scoped to a workspace (the API replies that the request must include the `anthropic-workspace-id` header). It looks like `wrkspc_...`, is not a secret, and is sent as that header. A workspace-scoped key does not need it.
 - ANTHROPIC_MODEL sets the model for every agent. The default is claude-opus-5-5.
 - FOCUS_MODEL_<AGENT> overrides one agent, for example FOCUS_MODEL_EVIDENCE_READER, FOCUS_MODEL_DIRECTION_MAPPER, FOCUS_MODEL_GAP_PLANNER, FOCUS_MODEL_CV_TAILOR or FOCUS_MODEL_OUTREACH_WRITER. This is how to run the light agents on a cheaper model.
@@ -28,8 +28,7 @@ All optional. With none set, the app runs entirely in the browser using the offl
 
 Never paste the key into a chat or a committed file. Use one of these:
 
-- Hosted site: set `ANTHROPIC_API_KEY` as a secret in the hosting project's settings. Never put it in `.openai/hosting.json`.
-- Your own machine: run `ANTHROPIC_API_KEY=... npm run dev:live`, or create a `.dev.vars` file in the project root yourself. `scripts/sync-dev-vars.mjs` copies the key from the environment into `.dev.vars` with owner-only permissions and prints variable names only. Git ignores `.dev.vars`.
+- Your own machine: run `ANTHROPIC_API_KEY=... npm run dev:live`, or create a `.env.local` file in the project root yourself. Next.js reads it at startup. `scripts/sync-env.mjs` copies the key from the environment into `.env.local` with owner-only permissions and prints variable names only. Git ignores `.env.local`.
 - Claude Code cloud session: add `ANTHROPIC_API_KEY` in the environment's settings (cloud environment menu, then Edit), under Network secrets if offered and otherwise as an environment variable, then start a new session and run `npm run dev:live`. The key never has to appear in the conversation, and the repository guidance tells sessions not to read or print it.
 
 The server reads the key only when handling a request. It is never sent to the browser. `GET /api/focus` reveals only whether a key is configured.
@@ -108,11 +107,11 @@ There are no recorded sample results. With a key, the sample buttons call the mo
 
 Roles are drawn from a curated list of about 35 families. The app does not search live job listings. It suggests job titles to search for.
 
-The consent flag on `/api/focus` is set by the browser and the server only checks that it is present. The route accepts same-origin requests only, caps the body at 120 KB (checked while reading, not after) and allows 12 requests a minute per client address. Each Worker isolate keeps its own count, so this slows casual abuse and is not a substitute for platform rate limiting. There is no authentication, and a `package` request makes two model calls. A key on a public deployment can still be used by anyone who finds the URL. Keep the site owner-private, or add access control and platform rate limiting, before sharing it widely. 
+The consent flag on `/api/focus` is set by the browser and the server only checks that it is present. The route accepts same-origin requests only, caps the body at 120 KB (checked while reading, not after) and allows 12 requests a minute per client address. The count is kept in memory by the server process and resets when it restarts, so this slows casual abuse and is not a substitute for rate limiting at a proxy. There is no authentication, and a `package` request makes two model calls. If you expose the server to other people with a key set, anyone who can reach it can spend that key. Run it locally, or add access control and rate limiting in front of it, before sharing it. 
 
-Job extraction reads static HTML. Login walls, redirects, JavaScript-only job boards and bot protection require pasting the description. `/api/job` accepts same-origin requests only, caps the body at 4 KB, allows 6 requests a minute per client address in each Worker isolate, allows only public HTTPS hostnames, resolves both A and AAAA records and refuses the request if any answer is private, reserved, loopback, link-local, multicast, documentation or unique-local (IPv6 is an allow-list of global unicast, and addresses that embed IPv4 are judged by that address), refuses redirects, and caps the response size and time. The hostname is resolved once by the check and again by the fetch, so DNS rebinding between the two is not prevented. That needs an egress proxy that pins the resolved address, which has to be set up at deployment.
+Job extraction reads static HTML. Login walls, redirects, JavaScript-only job boards and bot protection require pasting the description. `/api/job` accepts same-origin requests only, caps the body at 4 KB, allows 6 requests a minute per client address in the server process, allows only public HTTPS hostnames, resolves the hostname with the system resolver and refuses the request if any answer is private, reserved, loopback, link-local, multicast, documentation or unique-local (IPv6 is an allow-list of global unicast, and addresses that embed IPv4 are judged by that address), refuses redirects, and caps the response size and time. The hostname is resolved once by the check and again by the fetch, so DNS rebinding between the two is not prevented. Closing that gap needs the connection itself pinned to the checked address, or an egress proxy.
 
-Scanned PDFs need OCR outside this app. Complex layouts may extract out of order. Exports use a plain single-column layout. The PDF uses built-in Helvetica and supports Western text best. Review exports before sending. There are no accounts, history or persistent uploads. The hosted Site is owner-private by default.
+Scanned PDFs need OCR outside this app. Complex layouts may extract out of order. Exports use a plain single-column layout. The PDF uses built-in Helvetica and supports Western text best. Review exports before sending. There are no accounts, history or persistent uploads.
 
 ## Working across Claude sessions
 

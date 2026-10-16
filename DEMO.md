@@ -9,7 +9,7 @@ npm ci
 npm run dev
 ```
 
-Open the printed address, usually http://127.0.0.1:5173. Do a full run once before you present, so the fonts and the first page load are cached.
+Open the printed address, usually http://localhost:3000. Do a full run once before you present, so the fonts and the first page load are cached.
 
 ## The two-minute walkthrough
 
