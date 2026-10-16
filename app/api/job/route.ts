@@ -1,7 +1,8 @@
-export async function POST(request:Request){
- try{const {url}=await request.json() as {url:string};const u=new URL(url);if(u.protocol!=='https:'||u.port||u.username||u.password||!u.hostname.includes('.')||/localhost|\.local$|\.internal$|\.test$|\.invalid$|\.example$|\.localhost$|^[\d.]+$|:|metadata/i.test(u.hostname))return Response.json({error:'Use a public HTTPS job posting URL, or paste the description below.'},{status:400});
- const dns=await fetch('https://cloudflare-dns.com/dns-query?name='+encodeURIComponent(u.hostname)+'&type=A',{headers:{Accept:'application/dns-json'},signal:AbortSignal.timeout(5000)});const records=await dns.json() as {Answer?:{type:number,data:string}[]};const addresses=(records.Answer||[]).filter(x=>x.type===1);if(!addresses.length||addresses.some(x=>/^(0\.|10\.|127\.|169\.254\.|172\.(1[6-9]|2[0-9]|3[01])\.|192\.168\.|100\.(6[4-9]|[7-9][0-9]|1[01][0-9]|12[0-7])\.|198\.(18|19)\.|22[4-9]\.|2[3-5][0-9]\.)/.test(x.data)))throw Error('address');
- const res=await fetch(u,{redirect:'manual',signal:AbortSignal.timeout(10000),headers:{Accept:'text/html'}});if(!res.ok||res.status>=300)throw Error('unavailable');const reader=res.body?.getReader();if(!reader)throw Error('empty');let html='';let size=0;const decoder=new TextDecoder();while(true){const {done,value}=await reader.read();if(done)break;size+=value.length;if(size>1000000){await reader.cancel();throw Error('large');}html+=decoder.decode(value,{stream:true});}
- const text=html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,'').replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi,'').replace(/<\/(?:p|div|li|h[1-6])>/gi,'\n').replace(/<[^>]+>/g,' ').replace(/&nbsp;|&#160;/g,' ').replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/[ \t]+/g,' ').replace(/\n\s*\n/g,'\n').trim().slice(0,20000);if(text.length<100)throw Error('empty');return Response.json({text});
- }catch{return Response.json({error:'This site could not be read. It may block automated access or redirect. Paste the job description to continue.'},{status:422});}
+// URL fetching is disabled in the public demo until production egress
+// controls and rate limiting are implemented. Reject direct API calls too.
+export async function POST() {
+  return Response.json(
+    { error: "Paste the job description into the app. URL fetching is disabled in this demo." },
+    { status: 410, headers: { "Cache-Control": "no-store" } },
+  );
 }
