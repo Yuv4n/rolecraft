@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { sampleCV, sampleJob } from "../lib/engine.ts";
 import { parseCv } from "../lib/cv/parse.ts";
 import { renderText } from "../lib/cv/render.ts";
-import { applyChange, setPage, setOverride } from "../lib/cv/ops.ts";
+import { applyChange, setPage } from "../lib/cv/ops.ts";
 import { reviewCv, groups } from "../lib/analysis/review.ts";
 import { tailorCv, tailorText, composeAsk } from "../lib/analysis/tailor.ts";
 import { findRoles } from "../lib/analysis/roles.ts";

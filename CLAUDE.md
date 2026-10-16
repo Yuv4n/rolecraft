@@ -1,6 +1,6 @@
 # Rolecraft
 
-Read README.md for setup, architecture, privacy constraints and known limitations.
+Read README.md for setup and docs/design-notes.md for architecture, privacy constraints and known limitations.
 
 ## Start a session
 
@@ -41,7 +41,7 @@ CV parsing and exports run in the browser. Local draft storage is allowed only a
 
 The current engine is deterministic, with a limited vocabulary. Preserve this disclosure unless a real alternative is implemented. URL fetching needs production egress controls and rate limiting before public deployment. Do not weaken its existing restrictions.
 
-Keep secrets server-side and outside Git. `.openai/hosting.json` identifies the existing private Sites deployment; do not replace its project ID or publish changes automatically from a normal coding session.
+Keep secrets server-side and outside Git. The hosted demo must stay free to run: no AI or paid API calls, no Cloudflare bindings (D1, R2, KV, AI), no Workers Logs, and no secrets in the Worker. Do not add any of these without an explicit decision from the owner. Never deploy from a normal coding session.
 
 ## Writing
 

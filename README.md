@@ -1,172 +1,73 @@
 # Rolecraft
 
-[Open the live demo](https://rolecraft.yuv4n-apps.workers.dev/)
+A CV studio that runs entirely in the browser. Load a CV, then explore careers, tailor it to a role, find gaps, or get a scored review. Every suggestion points back to a line you wrote, and the tool asks you for facts instead of inventing them.
 
-A hackathon CV studio built with React 19, TypeScript and Vinext on Vite. The server route deploys to Cloudflare Workers through Sites.
+[Live demo](https://rolecraft.yuv4n-apps.workers.dev/) (click "Try a sample", no sign-in needed)
+
+![Review workflow: a scored CV review with six weighted groups](docs/review.png)
+
+## What it does
+
+After loading a CV (PDF, DOCX or pasted text) you pick a starting point. All five share one workspace, so accepted edits and saved roles carry across them.
+
+- Explore careers and find jobs. Career paths ranked by fit, then industries and specific roles, each with reasoning tied to quoted CV lines.
+- Tailor to a specific role. Paste a job description and get requirement-by-requirement evidence, questions where evidence is missing, and proposed edits shown as a word-level before and after that you accept or reject one by one.
+- Find roles that fit. Role profiles split into ready, stretch and low overlap, with the specific gaps.
+- Plan experience. Projects and responsibilities ranked by how much demand they would cover across your chosen roles.
+- Review and improve. Fifteen checks (relevance, action verbs, specificity, outcomes, tense, ATS readability and others) feed six weighted score groups. Every deduction is shown.
+
+Exports (PDF, DOCX, plain text) are generated in the browser from the same render model as the live preview, so what you see is what you download. Versions are immutable snapshots, so you can branch per role and restore any earlier state.
+
+![Career paths with evidence quoted from the CV](docs/careers.png)
+
+## Design choices
+
+- No AI service. Matching is deterministic: a fixed vocabulary, negation-aware term matching and conservative text rewrites. This makes results repeatable and explainable, and it means the hosted demo cannot incur API costs. The limits are real and documented: it recognises a bounded set of roles and skills and does not understand text semantically.
+- Nothing leaves the browser. There are no accounts, no database and no logging of CV contents. Refreshing clears the workspace unless you save a workspace file yourself.
+- Content and layout are separate. The CV is a flat map of nodes with stable ids; layout holds ordering, styles and page setup. Editing text never rewrites layout and the reverse (`lib/cv/types.ts`, asserted in `tests/model.test.mjs`).
+- Honest scores. Scores are revision guidance, not predictions of hiring success or of any employer's ATS. Claims that are negated or aspirational ("learning SQL") do not count as evidence. Requirements the tool cannot assess, such as degrees or licences, are flagged for you instead of scored.
+- Untrusted input. DOCX extraction is bounded (2 MB of expanded XML, no DTDs or entities, 30,000 characters) and PDFs are limited to 20 pages. Uploaded text is always rendered as text. See [SECURITY.md](SECURITY.md).
+
+## Stack
+
+React 19, TypeScript, Next.js app router running on Vite via vinext, deployed to Cloudflare Workers. PDF.js for reading PDFs, jsPDF and docx for exports. Eight test suites run as plain Node scripts using `assert`, with no test framework. GitHub Actions runs typecheck, tests, lint, formatting, a dependency audit and the production build on every push and pull request.
 
 ## Run locally
 
-Use Node.js 24 or later. `.node-version` pins the CI major version.
+Node.js 24 or later.
 
 ```sh
 npm ci
 npm run dev
 ```
 
-Open the Local URL printed by Vite, usually http://127.0.0.1:5173. Click Try a sample to populate the CV and job description, then continue through the four steps. The sample also works without any external job website.
-
-## Environment variables
-
-None required. No AI provider keys are used. The demo uses deterministic matching and conservative text transformations, rather than a language model. If you extend it with an AI service, keep its API key in a server-only environment variable and never prefix it with NEXT_PUBLIC_ or VITE_.
-
-## Checks
+Open http://localhost:5173 and click "Try a sample".
 
 ```sh
-npm run check
-npm run build:cloudflare
-npm run benchmark
+npm run check     # typecheck, tests, lint, formatting
+npm run build     # production build
+npm run benchmark # timing on near-limit CV and job text
 ```
 
-The test script also runs the data model, review, job feed and export suites (`tests/model.test.mjs`, `tests/analysis.test.mjs`, `tests/jobs.test.mjs`, `tests/export.test.mjs`).
+No environment variables are needed.
 
-## Five starting points
+## Hosting and cost
 
-After loading a CV the user chooses a goal. All five share one workspace, so accepted changes, saved roles and variants carry across them.
-
-- Explore careers and find jobs: career paths ranked by fit, each with reasoning tied to CV lines, then industries and specific roles inside them (for example Product Analyst in SaaS, Financial Analyst in fintech), then live postings from open job feeds ranked against the CV. Roles the user ticks become search keywords. Each posting shows why it fits, what is missing, and seniority or years-of-experience mismatches, and can be sent straight to the Tailor workflow.
-- Tailor my CV to a specific role: saved roles, requirement-by-requirement evidence, missing-evidence questions and proposed edits.
-- Find roles that fit my CV: 18 role profiles split into ready, stretch and low overlap, with evidence quotes and specific gaps.
-- Plan experience to strengthen my CV: projects, responsibilities and work experience ranked by weighted demand across chosen roles. CV lines stay locked until every [bracket] is replaced with a real fact.
-- Review and improve my CV: 15 checks (relevance, action verbs, specificity, outcomes, ownership, repetition, credibility, grammar, tense, section order, bullet order, density, readability, formatting consistency, ATS), six scored groups with deductions shown, and section, line and check views.
-
-Every proposed edit shows a word-level before and after, can be previewed in the CV panel, and is accepted or rejected individually. Edits that need a fact ask for it and use only the user's answer.
-
-## Job postings
-
-`/api/jobs` reads open job feeds and never accepts CV text or arbitrary URLs.
-
-- Sources: Remotive and Arbeitnow, plus optional company boards on Greenhouse and Lever that the user names. These are documented public JSON feeds. Rolecraft does not scrape job-board HTML, which most boards forbid and block. Each posting shows its source, links to the original, and is not stored.
-- Request: only role keywords (6 at most, 60 characters each), a place, a remote flag and board names that match `^[a-z0-9][a-z0-9_-]{0,49}$`. Every outbound URL is built from a fixed host allowlist (`lib/jobs/providers.ts`). Redirects are not followed, responses are capped at 4 MB, calls time out at 8 seconds and results are cached for 10 minutes.
-- Errors: each source reports found, or unavailable with a short fixed reason. Raw error text is never shown.
-- Ranking: runs in the browser (`lib/analysis/jobmatch.ts`). The CV is never sent. Job text is rendered as plain text.
-- Switch: live feeds are off unless the server variable `JOB_FEEDS_ENABLED` is `true`. Otherwise `/api/jobs` returns 410 and makes no outbound request, which keeps the public demo's no-outbound rule. The Careers workflow then offers the sample postings.
-- Rate limit: 20 searches per client per 10 minutes, held in memory. Each worker instance counts separately, so add a Cloudflare rate-limiting rule before public hosting.
-- Sample postings (fictional, no links) let the feature be demonstrated offline.
-- The feed formats were written from each provider's documentation and tested against fixtures. They were not exercised live from the development sandbox, which has no outbound network access, so check each source once on the deployed site.
-- Coverage: the open feeds lean towards remote and technology roles. Other boards would need their own licensed API.
-
-## Data model
-
-`lib/cv/types.ts` separates meaning from appearance and links them with stable node ids.
-
-- Content: a flat map of nodes (section, name, headline, contact, entry, bullet, paragraph, skills) with parent ids and text or parts. Content holds no order.
-- Layout: sibling order for every parent (section order, bullet order), role styles (font, size, bold, italic, colour, alignment, spacing, line height, indent, capitals, bullet glyph, separator), per-node overrides (page break, column break, hidden, style), and page setup (size, margins, columns, gap).
-- Snapshot: one content plus one layout. Editing text never replaces the layout object, and layout edits never replace content. `tests/model.test.mjs` asserts both.
-- Versions are immutable snapshots with a parent id. The import is stored once and never rewritten. A variant (for example one per role) has a head version, an uncommitted working copy and staged accept or reject decisions. Saving commits the working copy and accepted changes as one new version. Restoring and branching create new versions, so history is never lost.
-- `lib/cv/render.ts` resolves styles into render blocks. The live preview, PDF, DOCX and plain text all read the same blocks, so previews and exports agree. The exact PDF preview shows true pagination.
-- A workspace can be saved to and opened from a JSON file the user controls.
-
-Import limits: structure is parsed from extracted text, so fonts, columns and spacing in the uploaded file are not read. Imports start from a clean single-column layout that the Layout tab can change.
+The demo is a Cloudflare Worker with no bindings, no secrets and no variables, and Workers Logs is switched off in `vite.config.ts`. It makes no outbound requests: the live job-feed route (`/api/jobs`) answers 410 unless `JOB_FEEDS_ENABLED=true` is set, and the URL-fetch route (`/api/job`) is permanently disabled. Deployment needs a Cloudflare login (`npm run build && npm run deploy:cloudflare`). The optional workflow `.github/workflows/deploy.yml` stays inactive unless a token and `CLOUDFLARE_DEPLOY_ENABLED` are configured in the repository.
 
 ## Known limits
 
-This is a working demo with bounded heuristics. The vocabulary includes product, analytics, operations, design and common software roles, with a small alias dictionary. It does not perform broad semantic understanding, verify facts, or infer unstated qualifications. Niche recommendations are exploratory. Indented and numbered bullets are recognised. Rewrites apply only to known grammatical forms; other wording is preserved. Scores measure term coverage and textual proxies; they are not hiring predictions or actual employer ATS scores. Scores require at least 12 words, 60 letters and one statement of six words. Paragraphs and bullets are both accepted. Impact scoring requires both a number and an outcome verb; it still cannot verify the outcome. Negated and aspirational claims are excluded conservatively, which can miss valid evidence in complex sentences.
+- Scanned PDFs need OCR elsewhere, and complex layouts can extract out of order. Imports start from a clean single-column layout.
+- The vocabulary covers product, analytics, operations, design and common software roles. Niche recommendations are exploratory.
+- Live job postings were written against each provider's documented JSON feed and tested with fixtures, not against the live services, and are off in the demo. Sample postings show the feature.
+- The interface aims for AA contrast, visible focus and 44px targets, but it has not been audited with assistive technology.
 
-Job URL fetching is disabled for the public demo. Add production egress controls and rate limiting before restoring it. Live job feeds (`/api/jobs`) are also off by default and answer HTTP 410 without any outbound request until `JOB_FEEDS_ENABLED` is set to `true`.
+More detail is in [docs/design-notes.md](docs/design-notes.md).
 
-Scanned PDFs need OCR outside this app. Complex layouts may extract out of order. Exports use a plain single-column layout. PDF exports embed the openly licensed Noto Sans font. The exporter checks character coverage and directs users to DOCX if the text includes unsupported characters. Review exports before sending. Downloads were exercised in the browser; DOCX text was re-extracted to check preservation.
+## How it was built
 
-No server database, accounts, LLM integration or persistent uploads are included. The standalone Cloudflare app is public. The separate Sites deployment remains owner-private by default.
+Rolecraft started as a hackathon project and was built with substantial help from Claude (Anthropic's coding assistant), with the product constraints written down in `CLAUDE.md`. An earlier variant with live multi-agent analysis is kept at the tag `archive/hackathon-live-analysis`. It is left out of `main` because it needs paid API access.
 
-## Working across Claude sessions
+## Licence
 
-Clone the GitHub repository in each environment and ask Claude to read `CLAUDE.md` first. Give each task its own branch. For sessions on the same machine, use separate clones or `git worktree add ../rolecraft-task -b task-name` so concurrent edits do not share a working directory. Commit and push completed work; fetch and merge through pull requests before starting dependent tasks. Git stores source and handoff notes, not chat history.
-
-
-## Public Cloudflare Workers deployment
-
-The standalone deployment uses `worker.ts` and does not use Sites authentication
-or connector bindings. The existing `.openai/hosting.json` remains unchanged for
-Sites deployments. No application secrets or database bindings are required.
-
-Use Node 24 and run:
-
-```sh
-npm ci
-npm run check
-npm run build:cloudflare
-npx wrangler login
-npm run deploy:cloudflare
-```
-
-The generated Worker config is `dist/server/wrangler.json`. Deploy only after a
-successful standalone build. Wrangler prints the public `workers.dev` URL.
-Anyone with that link can use the demo without signing in. CV contents remain in
-the browser. Check the flow with the sample, then a real PDF and DOCX, and verify
-both exports on desktop and mobile.
-
-For automatic deployments, connect this repository under Cloudflare Workers
-Builds. Select `main`, use `npm run build:cloudflare` as the build command, and
-`npm run deploy:cloudflare` as the deploy command. The Worker name is `rolecraft`;
-use the same name in the dashboard. Configure the build environment to use Node
-24. Add a custom domain from the Worker settings if wanted. Cloudflare account
-authorization is required to deploy; GitHub access alone does not grant it.
-
-`.github/workflows/check.yml` runs type checks, engine and endpoint tests, and the
-standalone build on pull requests and pushes to main. Enable branch protection
-with this check required before merging if deployments should wait for checks.
-
-
-## Scoring and matching limits
-
-Review scores start at 100 per group and lose points for the findings listed under it, with at most 40 points lost per check. Relevance is the share of a role's recognised terms that the CV supports. Skill mentions that are negated or aspirational ("no SQL experience", "learning SQL") do not count as evidence anywhere, including role fit, career paths and posting ranking. The studio keeps work in the browser tab and saves nothing to the device unless the user downloads a workspace file. `lib/draft.ts` (opt-in device drafts) is retained and tested, but the studio does not use it yet.
-
-## Optional GitHub automatic deployment
-
-`.github/workflows/deploy.yml` deploys the exact main-branch commit that passed
-Verify Rolecraft. It never deploys pull-request code. It is disabled until the
-following repository settings exist:
-
-- Secret `CLOUDFLARE_API_TOKEN`: a Cloudflare API token scoped to the deployment
-  account with Workers Scripts Edit and Account Settings Read. Do not paste this
-  token into chat or commit it to source control.
-- Variable `CLOUDFLARE_ACCOUNT_ID`: the account ID used for Rolecraft.
-- Variable `CLOUDFLARE_DEPLOY_ENABLED`: `true`, after the secret is configured.
-
-Create the token in Cloudflare and enter it directly in GitHub Settings →
-Secrets and variables → Actions. The interactive Wrangler OAuth credential is
-not copied to GitHub. Keep the account on Workers Free. This workflow does not
-create subscriptions or enable paid storage services. If Workers Builds is used
-instead, leave the GitHub deployment switch disabled to avoid duplicate deploys.
-
-## Verification scope
-
-Regression tests cover short and paragraph-based CVs, empty-content scores,
-negation and affirmative clauses, grouped projects and PDF font coverage.
-Automated checks do not establish recruiter accuracy or accessibility compliance.
-Niche suggestions use predefined categories rather than live labour-market data.
-
-
-## Repository checks and performance
-
-`npm run check` runs TypeScript, regression tests, ESLint and formatting checks.
-`npm run format` formats the application page, styles and analysis modules.
-Generated TypeScript build metadata and vendored browser assets are excluded from
-source linting. CI cancels superseded checks and uses the same Node major version
-as local development.
-
-The job model is parsed once per description. CV line matches are reused across
-requirements, ratings and niche suggestions. The final editor updates its own
-evidence analysis and project recommendations. `npm run benchmark` exercises
-near-limit CV and job text locally; timings vary by hardware.
-
-Indented continuation lines move with their bullet. Ambiguous unindented
-continuations keep the source run in order. Conditional achievements retain their
-wording. Requirements involving licences, degrees or experience length are flagged
-for manual assessment and receive no automatic relevance credit. Scores with
-unassessed requirements are provisional. The engine cannot verify eligibility or
-truthfulness, and the vocabulary remains limited.
-
-DOCX extraction ignores deleted tracked-change text and rejects XML declarations.
-Expanded selected document parts are capped at 2 MB, and extracted text is capped
-at 30,000 characters. Scanned documents still require pasted text or external OCR.
+MIT, see [LICENSE](LICENSE). The bundled Noto Sans font is under the SIL Open Font License (`public/fonts/OFL.txt`).
