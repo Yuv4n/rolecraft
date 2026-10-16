@@ -6,7 +6,8 @@ import type {
   Direction, Email, Evidence, Gap, OutreachInput, PlanTask, Profile, Strength, TailorResult, Tier, TraceEntry,
 } from './types.ts';
 import {roleById, roleFamilies, type RoleFamily, type RoleRequirement} from './roles.ts';
-import {has, rewriteLine} from '../engine.ts';
+import {has, hasMetric, rewriteLine} from '../engine.ts';
+import {itemLines} from './bullets.ts';
 import {quoteInSource} from './grounding.ts';
 
 const BULLET = /^[\s•*·▪●◦-]+/;
@@ -134,6 +135,13 @@ const templates: Template[] = [
   {match: /writ|report|briefing|documentation/i, title: 'Write a sample briefing from public evidence', hours: 5, deliverable: 'A two-page briefing that cites its sources and states what the evidence does and does not show.'},
 ];
 
+function describeRewrite(original: string): string {
+  const a = strip(original).toLowerCase();
+  if (/^(successfully|effectively|efficiently|proactively|actively|diligently)\b/.test(a)) return 'Removed an opening word that adds no information.';
+  if (/^(worked on|helped with|assisted with|assisted in)\b/.test(a)) return 'Replaced a vague opener with a verb that says what your role was, without claiming more.';
+  return 'Replaced "responsible for" style wording with the verb for what you did.';
+}
+
 export function packageOffline(profile: Profile, direction: Direction): {tasks: PlanTask[]; tailor: TailorResult; trace: TraceEntry[]} {
   const started = Date.now();
   const tasks: PlanTask[] = [];
@@ -163,11 +171,12 @@ export function packageOffline(profile: Profile, direction: Direction): {tasks: 
   const family = roleById.get(direction.roleFamilyId);
   const terms = family ? family.requirements.flatMap((r) => r.terms) : [];
   const lines = profile.cv.split('\n');
-  const bullets = lines.filter((l) => /^\s*[•*-]\s/.test(l));
+  const item = itemLines(lines);
+  const bullets = lines.filter((_, i) => item[i]);
   const rewrites = bullets
-    .map((l) => ({original: l, revised: rewriteLine(l.trim())}))
-    .filter((r) => r.revised !== r.original.trim())
-    .map((r) => ({original: r.original, revised: r.revised, why: 'Replaced a weak opener with a verb of the same meaning.'}));
+    .map((l) => ({original: l, revised: rewriteLine(l)}))
+    .filter((r) => r.revised !== r.original)
+    .map((r) => ({original: r.original, revised: r.revised, why: describeRewrite(r.original)}));
   const emphasis = bullets
     .map((l) => ({l, n: terms.filter((t) => matchTerm(l, t)).length}))
     .filter((x) => x.n > 0 && strip(x.l).length >= 12)
@@ -175,7 +184,7 @@ export function packageOffline(profile: Profile, direction: Direction): {tasks: 
     .slice(0, 4)
     .map((x) => x.l.trim());
   const questions = bullets
-    .filter((l) => !/\d/.test(l) && strip(l).length >= 12)
+    .filter((l) => !hasMetric(l) && strip(l).length >= 12)
     .slice(0, 3)
     .map((l) => ({line: l.trim(), ask: 'What was the result of this, how was it measured, and who benefited? Add only what you can confirm.'}));
   return {tasks, tailor: {rewrites, emphasis, questions}, trace: trace('Fixed task templates and wording rules', started, tasks.length + rewrites.length)};

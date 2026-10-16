@@ -20,7 +20,7 @@ const line31 = '• Worked on onboarding experiments with product managers and d
 // --- engine fixes
 ok(!analyse(sampleCV, sampleJob).gaps.includes('experimentation'), 'experiments counts as experimentation');
 eq(rewriteLine('• Responsible for building SQL dashboards'), '• Built SQL dashboards');
-eq(rewriteLine('• Responsible for reporting weekly'), '• Responsible for reporting weekly', 'unmappable openers stay unchanged');
+eq(rewriteLine('• Responsible for the weekly report'), '• Responsible for the weekly report', 'unmappable openers stay unchanged');
 eq(rewriteLine('* Worked on onboarding tests'), '* Contributed to onboarding tests');
 
 // --- grounding

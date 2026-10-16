@@ -5,6 +5,9 @@
 // new number and no new content word. What they do not establish: that the model drew the right
 // conclusion from a quote. A quote may also be a fragment of a longer sentence.
 
+import {REPLACEMENT_VERBS} from './verbs.ts';
+import {itemLines} from './bullets.ts';
+
 const MIN_QUOTE = 12;
 const BULLETS = '•*·▪●◦';
 
@@ -90,14 +93,6 @@ const STOP = new Set((
   'than then so such also more most less very new while when where which who whom whose what how within without through ' +
   'between against about around after before during under up down out off can could would should will may might'
 ).split(' '));
-
-/** Verbs that may replace a weak opener such as "Responsible for", "Worked on" or "Helped with". */
-const REPLACEMENT_VERBS = new Set([
-  'built', 'led', 'ran', 'managed', 'created', 'developed', 'delivered', 'designed', 'produced', 'supported',
-  'contributed', 'prepared', 'presented', 'coordinated', 'maintained', 'owned', 'used', 'applied', 'increased',
-  'improved', 'raised', 'rose', 'grew', 'reduced', 'cut', 'wrote', 'analysed', 'analyzed', 'monitored', 'trained',
-  'implemented', 'tracked', 'reported', 'documented',
-]);
 
 export function contentWords(text: string): string[] {
   return (text.normalize('NFKC').toLowerCase().match(/\p{L}[\p{L}'-]*/gu) ?? []).filter((w) => w.length >= 3 && !STOP.has(w));
@@ -189,14 +184,14 @@ export function applyTailoring(
   emphasis: string[],
 ): string {
   const lines = cv.split('\n');
-  const bulletRe = new RegExp(`^\\s*[${BULLETS}-]\\s+`);
+  const markerRe = new RegExp(`^\\s*[${BULLETS}-]\\s+`);
   const byNorm = new Map<string, string>();
   for (const r of rewrites) byNorm.set(normalise(r.original), r.revised);
   const rewritten = lines.map((line) => {
     const hit = byNorm.get(normalise(line));
     if (hit === undefined) return line;
-    const marker = line.match(bulletRe)?.[0] ?? '';
-    const body = hit.replace(bulletRe, '').trim();
+    const marker = line.match(markerRe)?.[0] ?? '';
+    const body = hit.replace(markerRe, '').trim();
     return marker ? marker.replace(/\s+$/, ' ') + body : body;
   });
   const emph = emphasis.map((e) => normalise(e));
@@ -204,14 +199,16 @@ export function applyTailoring(
     const n = normalise(line);
     return n.length >= MIN_QUOTE && emph.some((e) => e.length >= MIN_QUOTE && (n.includes(e) || e.includes(n)));
   };
+  // Items are found with or without bullet markers, so plain-text CVs are reordered too.
+  const item = itemLines(rewritten);
   const out: string[] = [];
   for (let i = 0; i < rewritten.length; ) {
-    if (!bulletRe.test(rewritten[i])) {
+    if (!item[i]) {
       out.push(rewritten[i++]);
       continue;
     }
     const run: string[] = [];
-    while (i < rewritten.length && bulletRe.test(rewritten[i])) run.push(rewritten[i++]);
+    while (i < rewritten.length && item[i]) run.push(rewritten[i++]);
     const ranked = run.map((line, index) => ({line, index, hot: isEmphasised(line) ? 0 : 1}));
     ranked.sort((a, b) => a.hot - b.hot || a.index - b.index);
     out.push(...ranked.map((x) => x.line));

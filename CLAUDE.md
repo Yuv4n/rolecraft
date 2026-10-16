@@ -17,6 +17,9 @@ Read README.md for setup, architecture, privacy constraints and known limitation
 - `npx tsc --noEmit`
 - `node --experimental-strip-types tests/engine.test.mjs`
 - `node --experimental-strip-types tests/focus.test.mjs`
+- `node --experimental-strip-types tests/depth.test.mjs`
+- `node --experimental-strip-types tests/net.test.mjs`
+- `npm test` runs all four suites
 - `npm run build`
 
 No API keys or environment variables are required for the demo. Without `ANTHROPIC_API_KEY` the app uses its offline engine. Local secrets go in `.dev.vars`, which Git ignores.
@@ -29,7 +32,10 @@ No API keys or environment variables are required for the demo. Without `ANTHROP
 - `app/globals.css`: responsive interface.
 - `app/api/job/route.ts`: public job URL extraction.
 - `lib/engine.ts`: vocabulary matching, conservative line rewrites and scoring.
-- `tests/engine.test.mjs`, `tests/focus.test.mjs`: grounding, plan, validation, orchestrator and rubric checks.
+- `lib/vocab.ts`, `lib/focus/verbs.ts`, `lib/focus/bullets.ts`: vocabulary, rewrite verb table and line detection.
+- `lib/net-guard.ts`, `lib/rate-limit.ts`, `lib/http.ts`: URL and IP guard, limiter, body cap.
+- `components/kit`, `app/globals.css`: design system (tokens, stepper, action bar, alert, tabs).
+- `tests/*.test.mjs`: grounding, plan, validation, orchestrator, rubric, rewrite rules, network guard.
 
 ## Product constraints
 
