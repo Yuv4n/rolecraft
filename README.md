@@ -36,7 +36,7 @@ npm run build
 
 ## Known limits
 
-This is a working demo with bounded heuristics. The vocabulary focuses on product, analytics, operations, design and frontend roles. It does not perform broad semantic understanding, verify facts, or infer unstated qualifications. Niche recommendations are exploratory. CVs without standard bullet markers receive fewer rewrites. Scores measure term coverage and textual proxies; they are not hiring predictions or actual employer ATS scores. Impact scoring counts numbers and can overvalue non-outcome numbers.
+This is a working demo with bounded heuristics. The vocabulary includes product, analytics, operations, design and common software roles, with a small alias dictionary. It does not perform broad semantic understanding, verify facts, or infer unstated qualifications. Niche recommendations are exploratory. Indented and numbered bullets are recognised. Rewrites apply only to known grammatical forms; other wording is preserved. Scores measure term coverage and textual proxies; they are not hiring predictions or actual employer ATS scores. Scores require at least 40 words and a substantive bullet. Impact scoring requires both a number and an outcome verb; it still cannot verify the outcome. Negated and aspirational claims are excluded conservatively, which can miss valid evidence in complex sentences.
 
 Job URL fetching is disabled for the public demo. Add production egress controls and rate limiting before restoring it.
 
@@ -77,3 +77,13 @@ authorization is required to deploy; GitHub access alone does not grant it.
 `.github/workflows/check.yml` runs type checks, engine and endpoint tests, and the
 standalone build on pull requests and pushes to main. Enable branch protection
 with this check required before merging if deployments should wait for checks.
+
+
+## Scoring and matching limits
+
+Required and uncategorised terms receive twice the relevance weight of preferred
+terms. Short requirement lines are retained, and section headings determine the
+category rather than words within a requirement. The full gap list appears in
+Rating & priorities; project suggestions are limited to five so users can choose
+one manageable next step. Analysis is memoized and generation has no artificial
+waiting period. Refreshing still clears the browser workspace.
