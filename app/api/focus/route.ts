@@ -8,6 +8,9 @@ import {createLimiter} from '../../../lib/rate-limit';
 
 // This route handles CV text. It must never log request or response bodies.
 
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 /** Tells the browser whether live analysis is configured. Reveals nothing else. */
 export async function GET() {
   return Response.json({live: Boolean(getSecret('ANTHROPIC_API_KEY'))});

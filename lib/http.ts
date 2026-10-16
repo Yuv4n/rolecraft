@@ -1,7 +1,7 @@
 // Small request helpers shared by the API routes.
 
 export function clientIp(request: Request): string {
-  return request.headers.get('cf-connecting-ip') || request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+  return request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || request.headers.get('x-real-ip') || 'local';
 }
 
 /** True when the request has no Origin header or its Origin is this site. */

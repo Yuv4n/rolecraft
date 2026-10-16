@@ -5,6 +5,9 @@ import {createLimiter} from '../../../lib/rate-limit';
 // Fetches a public job posting for the user. This is a server-side request to a URL the user typed, so it is
 // restricted: HTTPS only, public addresses only, no redirects, a time limit and a size cap.
 
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 const limiter = createLimiter({windowMs: 60_000, max: 6});
 const MAX_HTML_BYTES = 1_000_000;
 const generic = 'This site could not be read. It may block automated access or redirect. Paste the job description to continue.';

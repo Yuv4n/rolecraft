@@ -40,24 +40,22 @@ for (const url of [
 ]) ok(checkJobUrl(url) !== null, 'blocked: ' + JSON.stringify(url));
 ok(checkJobUrl('https://' + 'a'.repeat(64) + '.com/') !== null, 'a label over 63 characters is blocked');
 
-// --- DNS answers, with an injected fetch
-const dns = (answers) => async (url) => {
-  const type = new URL(url).searchParams.get('type');
-  const records = (answers[type] ?? []).map((data) => ({type: type === 'A' ? 1 : 28, data}));
-  // CNAME records are present in real answers and must be ignored
-  return new Response(JSON.stringify({Answer: [{type: 5, data: 'alias.example.net.'}, ...records]}), {status: 200});
-};
-ok(await resolvesToPublicAddresses('a.com', dns({A: ['93.184.216.34'], AAAA: ['2606:2800:220:1:248:1893:25c8:1946']})));
-ok(await resolvesToPublicAddresses('a.com', dns({A: ['93.184.216.34'], AAAA: []})), 'IPv4 only is fine');
-ok(await resolvesToPublicAddresses('a.com', dns({A: [], AAAA: ['2606:4700::1111']})), 'IPv6 only is fine');
-ok(!(await resolvesToPublicAddresses('a.com', dns({A: [], AAAA: []}))), 'no answers is refused');
-ok(!(await resolvesToPublicAddresses('a.com', dns({A: ['93.184.216.34', '10.0.0.5'], AAAA: []}))), 'one private answer among public ones is refused');
-ok(!(await resolvesToPublicAddresses('a.com', dns({A: ['93.184.216.34'], AAAA: ['::1']}))), 'a private AAAA record is refused (the old check only asked for A)');
-ok(!(await resolvesToPublicAddresses('a.com', dns({A: [], AAAA: ['::ffff:169.254.169.254']}))), 'a mapped metadata address is refused');
-ok(!(await resolvesToPublicAddresses('a.com', dns({A: ['not-an-ip'], AAAA: []}))), 'garbage is refused');
+// --- DNS answers, with an injected resolver
+const resolver = (addresses) => async () => addresses;
+ok(await resolvesToPublicAddresses('a.com', resolver(['93.184.216.34', '2606:2800:220:1:248:1893:25c8:1946'])));
+ok(await resolvesToPublicAddresses('a.com', resolver(['93.184.216.34'])), 'IPv4 only is fine');
+ok(await resolvesToPublicAddresses('a.com', resolver(['2606:4700::1111'])), 'IPv6 only is fine');
+ok(!(await resolvesToPublicAddresses('a.com', resolver([]))), 'no answers is refused');
+ok(!(await resolvesToPublicAddresses('a.com', resolver(['93.184.216.34', '10.0.0.5']))), 'one private answer among public ones is refused');
+ok(!(await resolvesToPublicAddresses('a.com', resolver(['93.184.216.34', '::1']))), 'a private IPv6 answer is refused');
+ok(!(await resolvesToPublicAddresses('a.com', resolver(['::ffff:169.254.169.254']))), 'a mapped metadata address is refused');
+ok(!(await resolvesToPublicAddresses('a.com', resolver(['not-an-ip']))), 'garbage is refused');
 let threw = false;
-await resolvesToPublicAddresses('a.com', async () => new Response('', {status: 500})).catch(() => { threw = true; });
+await resolvesToPublicAddresses('a.com', async () => { throw new Error('dns'); }).catch(() => { threw = true; });
 ok(threw, 'a failing resolver is an error, never a pass');
+// the real system resolver: a literal public address resolves to itself, and a lookup of nothing fails
+ok(await resolvesToPublicAddresses('8.8.8.8'), 'the system resolver accepts a public literal');
+ok(!(await resolvesToPublicAddresses('127.0.0.1')), 'the system resolver refuses loopback');
 
 // --- limiter
 {
@@ -87,9 +85,9 @@ ok(threw, 'a failing resolver is an error, never a pass');
   ok(!sameOrigin(new Request('https://app.example/api/x', {headers: {origin: 'https://evil.example'}})));
   ok(!sameOrigin(new Request('https://app.example/api/x', {headers: {origin: 'null'}})), 'the null origin is refused');
   ok(!sameOrigin(new Request('https://app.example/api/x', {headers: {origin: 'https://app.example.evil.com'}})));
-  eq(clientIp(new Request('https://a/', {headers: {'cf-connecting-ip': '1.2.3.4', 'x-forwarded-for': '9.9.9.9'}})), '1.2.3.4');
-  eq(clientIp(new Request('https://a/', {headers: {'x-forwarded-for': '9.9.9.9, 8.8.8.8'}})), '9.9.9.9');
-  eq(clientIp(new Request('https://a/')), 'unknown');
+    eq(clientIp(new Request('https://a/', {headers: {'x-forwarded-for': '9.9.9.9, 8.8.8.8'}})), '9.9.9.9');
+  eq(clientIp(new Request('https://a/', {headers: {'x-real-ip': '7.7.7.7'}})), '7.7.7.7');
+  eq(clientIp(new Request('https://a/')), 'local');
 }
 
 console.log(`PASS: ${checks} network guard checks (IPv4, IPv6, URLs, DNS answers, limiter, body cap, origin)`);

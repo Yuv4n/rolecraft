@@ -1,12 +1,9 @@
-// Server-only configuration. Secrets stay on the server and are never sent to the browser.
-
-import {env} from 'cloudflare:workers';
+// Server-only configuration, read from the process environment. Secrets stay on the server and are never sent to the
+// browser. Next.js loads .env.local at startup, so a key placed there (see scripts/sync-env.mjs) is available here.
 
 export function getSecret(name: string): string | undefined {
-  const bound = (env as unknown as Record<string, unknown>)?.[name];
-  if (typeof bound === 'string' && bound) return bound;
-  const fromProcess = typeof process !== 'undefined' ? process.env?.[name] : undefined;
-  return fromProcess || undefined;
+  const value = process.env[name];
+  return value ? value : undefined;
 }
 
 export const DEFAULT_MODEL = 'claude-opus-5-5';

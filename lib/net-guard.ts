@@ -2,7 +2,7 @@
 // fetch, so the rules can be tested without a network.
 //
 // Limit: the hostname is resolved here and again by the later fetch. A DNS answer that changes between the two
-// (rebinding) is not prevented. Closing that gap needs an egress proxy that pins the resolved address.
+// (rebinding) is not prevented. Closing that gap needs the connection itself to be pinned to the checked address.
 
 const BLOCKED_SUFFIXES = ['.local', '.internal', '.localhost', '.test', '.invalid', '.example', '.lan', '.home', '.corp', '.intranet', '.onion', '.arpa', '.localdomain'];
 
@@ -99,20 +99,20 @@ export function checkJobUrl(raw: string): string | null {
   return null;
 }
 
-type Fetch = typeof fetch;
+/** Returns every address a hostname resolves to. Uses the operating system resolver. */
+export type Resolver = (hostname: string) => Promise<string[]>;
 
-/** Resolves A and AAAA records over DNS-over-HTTPS. True only when there is at least one answer and every answer is public. */
-export async function resolvesToPublicAddresses(hostname: string, doFetch: Fetch = fetch): Promise<boolean> {
-  const ask = async (type: 'A' | 'AAAA') => {
-    const res = await doFetch(`https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(hostname)}&type=${type}`, {
-      headers: {Accept: 'application/dns-json'},
-      signal: AbortSignal.timeout(5000),
-    });
-    if (!res.ok) throw new Error('dns');
-    const body = (await res.json()) as {Answer?: {type: number; data: string}[]};
-    return (body.Answer ?? []).filter((a) => a.type === (type === 'A' ? 1 : 28)).map((a) => a.data);
-  };
-  const [v4, v6] = await Promise.all([ask('A'), ask('AAAA')]);
-  const all = [...v4, ...v6];
-  return all.length > 0 && all.every(isPublicIp);
+const systemResolver: Resolver = async (hostname) => {
+  const {lookup} = await import('node:dns/promises');
+  const records = await lookup(hostname, {all: true, verbatim: true});
+  return records.map((r) => r.address);
+};
+
+/**
+ * True only when the hostname resolves to at least one address and every address is public. Both IPv4 and IPv6
+ * answers are checked. A failing lookup throws, so it is never read as a pass.
+ */
+export async function resolvesToPublicAddresses(hostname: string, resolve: Resolver = systemResolver): Promise<boolean> {
+  const addresses = await resolve(hostname);
+  return addresses.length > 0 && addresses.every(isPublicIp);
 }
