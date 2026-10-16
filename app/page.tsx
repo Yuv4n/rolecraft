@@ -1,23 +1,365 @@
 'use client';
-import {useState} from 'react';
-import {ArrowUpRight,ArrowRight,ArrowLeft,Check,FileText,Upload,Link, Sparkles,ShieldCheck,Download,Target,Layers,CheckCircle2,Plus} from 'lucide-react';
-import {sampleCV,sampleJob,analyse,tailor,rate} from '../lib/engine';
-export default function Home(){
- const [step,setStep]=useState(0),[cv,setCV]=useState(''),[job,setJob]=useState(''),[url,setUrl]=useState(''),[result,setResult]=useState(''),[busy,setBusy]=useState(''),[error,setError]=useState(''),[tab,setTab]=useState('comparison'),[filename,setFilename]=useState('');
- const a=analyse(cv,job); const original=rate(cv,job), revised=rate(result,job);const overall=(r:ReturnType<typeof rate>)=>Math.round(r.reduce((n,x)=>n+x.score,0)/4);
- async function upload(file?:File){if(!file)return;setError('');if(file.size>8*1024*1024){setError('Choose a file smaller than 8 MB.');return;}setBusy('Extracting your CV…');try{const buffer=await file.arrayBuffer();let text='';if(/\.docx$/i.test(file.name)){const mammoth=await import('mammoth');text=(await mammoth.extractRawText({arrayBuffer:buffer})).value;}else if(/\.pdf$/i.test(file.name)){const pdfjs=await import('pdfjs-dist');pdfjs.GlobalWorkerOptions.workerSrc='/pdf.worker.min.mjs';const pdf=await pdfjs.getDocument({data:new Uint8Array(buffer)}).promise;if(pdf.numPages>20)throw Error('Please upload a CV with 20 pages or fewer.');for(let i=1;i<=pdf.numPages;i++){const p=await pdf.getPage(i);const content=await p.getTextContent();for(const item of content.items){if('str' in item)text+=item.str+('hasEOL' in item&&item.hasEOL?'\n':' ');}text+='\n';}}else throw Error('Please upload a PDF or DOCX file.');if(text.trim().length<40)throw Error('No readable text found. For scanned PDFs, paste your CV text below.');setCV(text.slice(0,30000));setFilename(file.name);}catch(e){setError(e instanceof Error?e.message:'Could not read this document. Paste your CV text below.');}finally{setBusy('');}}
- async function fetchJob(){setBusy('Reading job posting…');setError('');try{const r=await fetch('/api/job',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url})});const d=await r.json() as {error?:string,text:string};if(!r.ok)throw Error(d.error);setJob(d.text);}catch(e){setError(e instanceof Error?e.message:'Could not read the URL. Paste the description below.');}finally{setBusy('');}}
- async function generate(){setBusy('Matching your experience to the role…');await new Promise(r=>setTimeout(r,650));setResult(tailor(cv,job));setStep(3);setBusy('');setTab('comparison');}
- async function download(format:string){setBusy('Preparing '+format.toUpperCase()+'…');setError('');try{if(format==='docx'){const {Document,Packer,Paragraph,TextRun}=await import('docx');const doc=new Document({sections:[{children:result.split('\n').map(line=>new Paragraph({children:[new TextRun({text:line,font:'Arial',size:22})],spacing:{after:100}}))}]});save(await Packer.toBlob(doc),'tailored-cv.docx');}else{const {jsPDF}=await import('jspdf');const pdf=new jsPDF();pdf.setFont('helvetica');pdf.setFontSize(11);let y=20;for(const line of result.split('\n')){for(const wrapped of pdf.splitTextToSize(line.replace(/•/g,'-').replace(/[–—]/g,'-'),170)){if(y>275){pdf.addPage();y=20;}pdf.text(wrapped,20,y);y+=5.5;}y+=2;}save(pdf.output('blob'),'tailored-cv.pdf');}}catch{setError('The download could not be created. Please try again.');}finally{setBusy('');}}
- function save(blob:Blob,name:string){const u=URL.createObjectURL(blob);const el=document.createElement('a');el.href=u;el.download=name;el.click();setTimeout(()=>URL.revokeObjectURL(u),1000);}
- function sample(){setCV(sampleCV);setJob(sampleJob);setFilename('Alex Morgan · sample CV');setError('');setStep(0);}
- return <div className="app"><aside><a className="brand" href="/"> <span className="brand-icon"><Layers size={22}/></span>rolecraft<span className="brand-dot">.</span></a><div className="workspace-label">YOUR WORKSPACE</div><div className="nav-active"><FileText size={18}/> CV studio <span>01</span></div><div className="aside-note"><div className="mini-orbit"><Sparkles size={20}/></div><h3>Your experience.<br/>A sharper story.</h3><p>A thoughtful next step starts with what you’ve already done.</p></div><div className="aside-bottom"><ShieldCheck size={17}/><span>Private by design<br/><small>CV files stay in your browser</small></span></div></aside>
- <div className="main"><header><span>Workspace <span className="slash">/</span> <strong>CV studio</strong></span><span className="demo-tag"><span/> HACKATHON EDITION</span></header><main><div className="intro"><div><div className="eyebrow">A LITTLE DIRECTION. A LOT OF POSSIBILITY.</div><h1>Make your experience count<span>.</span></h1><p>Turn the work you’ve done into a CV that speaks to your next role.</p></div><button className="sample-button" onClick={sample}><Sparkles size={16}/> Try a sample <ArrowUpRight size={16}/></button></div>
- <nav className="steps">{['Your experience','Target role','Review insights','Your tailored CV'].map((s,i)=><button key={s} disabled={i>step} onClick={()=>{setError('');setStep(i)}} className={i===step?'current':i<step?'complete':''}><span>{i<step?<Check size={14}/>:String(i+1).padStart(2,'0')}</span>{s}{i<3&&<ArrowRight className="step-arrow" size={15}/>}</button>)}</nav>
- {error&&<div role="alert" className="error">{error}</div>}{busy&&<div role="status" className="loading"><span className="spinner"/>{busy}</div>}
- {step===0&&<div className="input-grid"><section className="card"><div className="section-kicker">STEP 01 / YOUR EXPERIENCE</div><h2>Start with your story</h2><p className="muted">Upload your current CV. We’ll find the experience worth bringing forward.</p><label className="drop" onDragOver={e=>e.preventDefault()} onDrop={e=>{e.preventDefault();upload(e.dataTransfer.files[0]);}}><div className="upload-icon"><Upload size={24}/></div><h3>{filename||'Drop your CV here'}</h3><p>or <span>browse files</span> to get started</p><small>PDF or DOCX · Up to 8 MB · Text-based documents</small><input type="file" accept=".pdf,.docx" aria-label="Upload CV" onChange={e=>upload(e.target.files?.[0])}/></label><div className="field-heading"><label htmlFor="cv">{cv?'Review your extracted text':'Or paste your CV text'}</label><span>{cv.length.toLocaleString()} / 30,000</span></div><textarea id="cv" value={cv} maxLength={30000} onChange={e=>setCV(e.target.value)} placeholder="Your name, experience, education and skills…" rows={cv?12:4}/><p className="field-help">Check headings, dates and bullet breaks before continuing. You can edit everything here.</p><div className="card-footer"><span><ShieldCheck size={14}/> No CV storage. No content logs.</span><button disabled={cv.trim().length<80||!!busy} className="primary" onClick={()=>{setStep(1);setError('')}}>Continue <ArrowRight size={16}/></button></div></section><div className="right-column"><div className="illustration-card"><div className="floating-chip"><CheckCircle2 size={14}/> Built on real experience</div><div className="paper"><div className="paper-avatar">AM</div><div className="paper-name">Alex Morgan</div><div className="paper-role">PRODUCT ANALYST</div><div className="paper-line wide"/><div className="paper-line"/><div className="paper-heading">EXPERIENCE</div><div className="paper-line wide"/><div className="paper-line green"/><div className="paper-line"/><div className="paper-line wide"/><div className="paper-heading">SKILLS & STRENGTHS</div><div className="paper-line green"/><div className="paper-line"/></div><span className="sparkle one">✧</span><span className="sparkle two">✧</span><div className="illustration-caption">Same you. Clearer potential.</div></div><div className="expect"><h3>A better CV, without the guesswork</h3>{[['01','Find your direction','Discover roles and niches backed by your experience.'],['02','Connect the dots','Bring your most relevant work to the front.'],['03','Leave with a plan','Get a tailored CV and practical next steps.']].map(([n,t,p])=><div className="expect-row" key={n}><span>{n}</span><div><h4>{t}</h4><p>{p}</p></div></div>)}</div></div></div>}
- {step===1&&<section className="card role-card"><div className="section-kicker">STEP 02 / TARGET ROLE</div><h2>Where do you want to go?</h2><p className="muted">Add a job posting, then check the extracted description before continuing.</p><label htmlFor="url">Job posting URL</label><div className="url-row"><Link size={18}/><input id="url" type="url" placeholder="https://company.com/careers/your-next-role" value={url} onChange={e=>setUrl(e.target.value)}/><button className="secondary" disabled={!url||!!busy} onClick={fetchJob}>Read posting <ArrowUpRight size={16}/></button></div><div className="field-heading"><label htmlFor="job">Job description</label><span>Paste or correct the extracted text</span></div><textarea id="job" rows={16} maxLength={20000} value={job} onChange={e=>setJob(e.target.value)} placeholder="Paste the responsibilities, required skills and preferred experience here…"/><p className="field-help">Some job boards block access. Pasting the description works just as well.</p><div className="card-footer"><button className="text-button" onClick={()=>setStep(0)}><ArrowLeft size={16}/> Back</button><button className="primary" disabled={job.trim().length<80||!!busy} onClick={()=>setStep(2)}>Review insights <ArrowRight size={16}/></button></div></section>}
- {step===2&&<><div className="review-heading"><div><div className="section-kicker">STEP 03 / CONNECT THE DOTS</div><h2>Here’s where your experience fits</h2></div><button className="primary" disabled={!!busy} onClick={generate}><Sparkles size={16}/> Generate tailored CV</button></div><div className="notice"><ShieldCheck size={18}/><p>Evidence-first demo. We match explicit terms and reorder existing bullets. No qualifications, metrics or experience are added. Confirm that each extracted requirement belongs to the role.</p></div><div className="niche-grid">{a.suggestions.length?a.suggestions.map((s,i)=><section className="card niche" key={s.title}><span className="niche-number">0{i+1} <ArrowUpRight size={18}/></span><h3>{s.title}</h3><p className="sector">{s.sector}</p><p className="muted">Explore this direction because your CV includes:</p>{s.evidence.map(e=><blockquote key={e}>{e}</blockquote>)}</section>):<p>No supported niche found in the demo vocabulary. Add more specific skills and experience to your CV.</p>}</div><section className="card"><div className="title-row"><h3>Role requirements & your evidence</h3><span className="pill">{a.matched.length} of {a.skills.length} terms supported</span></div>{a.requirements.map((r,i)=><div className="requirement" key={i}><span className={r.evidence.length?'match-icon':'gap-icon'}>{r.evidence.length?<Check size={16}/>:<Plus size={16}/>}</span><div><small>{r.category} · {r.matched.length===r.terms.length&&r.terms.length?'Supported terms':r.evidence.length?'Partial evidence':'Needs review'}</small><h4>{r.text}</h4><p>{r.terms.length?`Recognised terms: ${r.terms.join(', ')}`:'Review manually: no recognised terms in this line.'}</p>{r.evidence.length>0?<blockquote>{r.evidence[0]}</blockquote>:<small>No direct evidence found. This is a gap to review, not a claim to add.</small>}</div></div>)}</section></>}
- {step===3&&<><div className="review-heading"><div><div className="section-kicker">STEP 04 / READY FOR YOUR NEXT CHAPTER</div><h2>A clearer story, grounded in you</h2></div><div className="download-buttons"><button className="secondary" disabled={!!busy} onClick={()=>download('docx')}><Download size={16}/> DOCX</button><button className="primary" disabled={!!busy} onClick={()=>download('pdf')}><Download size={16}/> Download PDF</button></div></div><div className="result-summary"><div><span className="score-big">{overall(revised)}<small>/100</small></span><p>Tailored CV guidance score</p></div><div><span className="score-before">{overall(original)} → {overall(revised)}</span><p>Equal weighting across four criteria</p></div><div><ShieldCheck size={24}/><p>Uses only your existing evidence<br/>No new facts added</p></div></div><div className="tabs">{[['comparison','CV comparison'],['rating','Rating & priorities'],['projects','Build your next advantage']].map(([v,l])=><button key={v} className={tab===v?'selected':''} onClick={()=>setTab(v)}>{l}</button>)}</div>{tab==='comparison'&&<><div className="notice"><Sparkles size={18}/><p>Highlights show rewritten or moved lines. Relevant bullets move first; vague openings become direct. Review the wording, then edit the final CV below before downloading.</p></div><div className="comparison">{[[cv,'Original CV'],[result,'Tailored CV']].map(([text,title],i)=><section className="card document" key={title}><div className="title-row"><h3>{title}</h3><span className="pill">{i?'Editable below':'Your source'}</span></div><div className="cv-text">{text.split('\n').map((line,j)=>{const changed=i===1&&(!cv.split('\n').includes(line)||cv.split('\n')[j]!==line);return <div key={j} className={changed?'changed':''}>{line||'\u00a0'}</div>})}</div></section>)}</div><section className="card edit-final"><label htmlFor="final">Final review & edits</label><textarea id="final" rows={14} value={result} onChange={e=>setResult(e.target.value)} maxLength={30000}/><p className="field-help">Your edits update scores and both exports. Check that every claim remains accurate.</p></section></>}{tab==='rating'&&<><p className="muted">Guidance for revision, not a prediction of hiring success. These deterministic checks do not simulate an employer’s ATS.</p><div className="score-grid">{revised.map((r,i)=><section className="card" key={r.name}><div className="title-row"><h3>{r.name}</h3><Target size={18}/></div><div className="score-display">{r.score}<small>/100</small><span>was {original[i].score}</span></div><div className="score-track"><div style={{width:r.score+'%'}}/></div><p className="muted">{r.why}</p></section>)}</div><section className="card"><h3>Your most useful next edits</h3><ol className="priorities"><li>Check missing requirements: {a.gaps.join(', ')||'all recognised terms appear in your CV'}. Add evidence only if you have it.</li><li>For each bullet without an outcome, ask: What changed? Who benefited? How was it measured? Add a metric only if you can verify it.</li><li>Check extracted section headings, contact information and dates. Keep the final document in one column.</li></ol><h3>Details worth adding</h3>{cv.split('\n').filter(l=>/^[•*-]/.test(l)&&! /\d/.test(l)).slice(0,5).map(l=><div className="question" key={l}><blockquote>{l}</blockquote><p>What was your contribution, and what observable outcome followed? Add your answer in the final editor if you can substantiate it.</p></div>)}</section></>}{tab==='projects'&&<div className="project-list">{a.gaps.length?a.gaps.map((gap,i)=><section className="card project" key={gap}><span className="niche-number">PROJECT {String(i+1).padStart(2,'0')}</span><h3>{/dbt|warehouse/i.test(gap)?'Build a small analytics pipeline':/testing|significance|experimentation/i.test(gap)?'Design and evaluate an experiment':`Create a practical ${gap} case study`}</h3><span className="pill">Addresses: {gap}</span><p>{/dbt|warehouse/i.test(gap)?'Use an open dataset. Build staging and reporting models, add data-quality tests, and document lineage. Publish reproducible setup instructions.':/testing|significance|experimentation/i.test(gap)?'Use simulated or open experiment data. Define a hypothesis, primary metric and sample size. Analyse uncertainty and explain when you would avoid shipping.':`Use a public dataset or a small volunteer brief to practise ${gap}. Define the problem, build a small deliverable, and document your decisions and limitations.`}</p><div className="project-deliverable"><CheckCircle2 size={18}/><span>Demonstrate: a working artifact, a clear explanation of your method, and an honest account of the results. Ask a practitioner for feedback.</span></div><small>Add this to your CV only after completing it. Label independent projects clearly.</small></section>):<section className="card"><h3>Deepen your strongest evidence</h3><p>No vocabulary gaps found. Build a public case study around one existing strength, using non-confidential data, and explain the decisions and tradeoffs.</p></section>}</div>}</>}
- <footer><span>Made for your next move.</span><span>Grounded in evidence. Always yours.</span></footer></main></div></div>
+import Link from 'next/link';
+import {useEffect, useMemo, useState} from 'react';
+import {ArrowLeft, ArrowRight, Check, Layers, ShieldCheck, Sparkles, ArrowUpRight, FileText} from 'lucide-react';
+import {sampleCV, sampleJob, sampleProjects, sampleInterests, sampleNurseCV, sampleNurseProjects, sampleNurseInterests} from '../lib/engine';
+import {extractCvText, downloadCv} from '../lib/files';
+import {applyTailoring} from '../lib/focus/grounding';
+import {fitPlan, weeksUntil} from '../lib/focus/plan';
+import {discoverOffline, outreachOffline, packageOffline} from '../lib/focus/offline';
+import type {
+  DiscoverResponse, Direction, Email, FocusMode, OutreachInput, OutreachResponse, PackageResponse, PlanTask, Profile, TailorResult, TraceEntry,
+} from '../lib/focus/types';
+import {ExperienceStep} from '../components/steps/ExperienceStep';
+import {TailoredStep} from '../components/steps/TailoredStep';
+import {ConsentPanel} from '../components/focus/ConsentPanel';
+import {Directions} from '../components/focus/Directions';
+import {PlanView} from '../components/focus/PlanView';
+import {Outreach} from '../components/focus/Outreach';
+import {NextAction} from '../components/focus/NextAction';
+import {TracePanel} from '../components/focus/TracePanel';
+
+const STEPS = ['Your experience', 'Directions', 'Plan', 'Tailored CV', 'Next action'];
+const DAY = 86_400_000;
+
+function isoIn(days: number) {
+  return new Date(Date.now() + days * DAY).toISOString().slice(0, 10);
+}
+
+async function callFocus<T>(body: object): Promise<T> {
+  const response = await fetch('/api/focus', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)});
+  const data = (await response.json().catch(() => ({}))) as {error?: string};
+  if (!response.ok) throw new Error(data.error || 'The analysis could not be completed.');
+  return data as T;
+}
+
+export default function Home() {
+  const [step, setStep] = useState(0);
+  const [reached, setReached] = useState(0);
+  const [cv, setCV] = useState('');
+  const [projects, setProjects] = useState('');
+  const [interests, setInterests] = useState('');
+  const [hours, setHours] = useState(4);
+  const [applyBy, setApplyBy] = useState(() => isoIn(42));
+  const [today] = useState(() => Date.now());
+  const [filename, setFilename] = useState('');
+  const [busy, setBusy] = useState('');
+  const [error, setError] = useState('');
+
+  const [live, setLive] = useState<boolean | null>(null); // is a model configured on the server
+  const [mode, setMode] = useState<FocusMode>('offline'); // how the current results were produced
+  const [consentFor, setConsentFor] = useState(''); // profile text the user agreed to send
+  const [askConsent, setAskConsent] = useState(false);
+
+  const [directions, setDirections] = useState<Direction[]>([]);
+  const [selectedId, setSelectedId] = useState<string | undefined>();
+  const [tasks, setTasks] = useState<PlanTask[]>([]);
+  const [tailor, setTailor] = useState<TailorResult>({rewrites: [], emphasis: [], questions: []});
+  const [result, setResult] = useState('');
+  const [discoverTrace, setDiscoverTrace] = useState<TraceEntry[]>([]);
+  const [packageTrace, setPackageTrace] = useState<TraceEntry[]>([]);
+  const [outreachTrace, setOutreachTrace] = useState<TraceEntry[]>([]);
+  const [planFor, setPlanFor] = useState<string | undefined>();
+  const [job, setJob] = useState('');
+  const [url, setUrl] = useState('');
+  const [tab, setTab] = useState('comparison');
+  const [email, setEmail] = useState<Email | undefined>();
+  const [emailError, setEmailError] = useState('');
+
+  useEffect(() => {
+    fetch('/api/focus')
+      .then((r) => r.json() as Promise<{live?: boolean}>)
+      .then((d) => setLive(Boolean(d.live)))
+      .catch(() => setLive(false));
+  }, []);
+
+  const profile: Profile = useMemo(() => ({cv, projects, interests, hoursPerWeek: hours, applyBy}), [cv, projects, interests, hours, applyBy]);
+  const consentKey = JSON.stringify([cv, projects, interests]);
+  const direction = directions.find((d) => d.id === selectedId);
+  const trace = [...discoverTrace, ...(planFor === selectedId ? packageTrace : []), ...outreachTrace];
+  const weeks = weeksUntil(applyBy);
+  const daysToApply = Math.ceil((Date.parse(applyBy + 'T00:00:00Z') - (today - (today % DAY))) / DAY);
+  const weekOne = useMemo(() => {
+    const plan = fitPlan(tasks, hours, weeks);
+    return plan.scheduled.find((t) => t.startWeek === 1) ?? plan.scheduled[0];
+  }, [tasks, hours, weeks]);
+
+  function selectDirection(id: string) {
+    setSelectedId(id);
+    // A plan, CV and email built for another direction no longer apply.
+    if (id !== planFor) setReached((r) => Math.min(r, 1));
+  }
+
+  function go(next: number) {
+    setError('');
+    setStep(next);
+    setReached((r) => Math.max(r, next));
+  }
+
+  async function upload(file?: File) {
+    if (!file) return;
+    setError('');
+    setBusy('Reading your CV…');
+    try {
+      setCV(await extractCvText(file));
+      setFilename(file.name);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not read this document. Paste your CV text below.');
+    } finally {
+      setBusy('');
+    }
+  }
+
+  function loadSample(kind: 'product' | 'clinical') {
+    const alex = kind === 'product';
+    setCV(alex ? sampleCV : sampleNurseCV);
+    setProjects(alex ? sampleProjects : sampleNurseProjects);
+    setInterests(alex ? sampleInterests : sampleNurseInterests);
+    setJob(alex ? sampleJob : '');
+    setHours(4);
+    setApplyBy(isoIn(42));
+    setFilename(alex ? 'Alex Morgan · sample CV' : 'Priya Shah · sample CV');
+    setDirections([]);
+    setSelectedId(undefined);
+    setError('');
+    setAskConsent(false);
+    setStep(0);
+  }
+
+  async function discover(useLive: boolean) {
+    setAskConsent(false);
+    setError('');
+    setBusy(useLive ? 'Reading your evidence and matching it to role families…' : 'Matching your text to role families…');
+    try {
+      const res = useLive
+        ? await callFocus<DiscoverResponse>({action: 'discover', consent: true, profile})
+        : discoverOffline(profile);
+      if (!res.directions.length) {
+        setError('No direction could be supported by your text. Add more detail about what you have done, then try again.');
+        return;
+      }
+      setMode(useLive ? 'live' : 'offline');
+      setDirections(res.directions);
+      setSelectedId(res.directions[0].id);
+      setDiscoverTrace(res.trace);
+      setPackageTrace([]);
+      setOutreachTrace([]);
+      setTasks([]);
+      setPlanFor(undefined);
+      setEmail(undefined);
+      setReached(1);
+      go(1);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'The analysis could not be completed.');
+    } finally {
+      setBusy('');
+    }
+  }
+
+  function start() {
+    setError('');
+    if (live && consentFor !== consentKey) {
+      setAskConsent(true);
+      return;
+    }
+    void discover(Boolean(live));
+  }
+
+  async function buildPlan() {
+    if (!direction) return;
+    setError('');
+    setBusy(mode === 'live' ? 'Planning tasks and tailoring your CV…' : 'Building your plan…');
+    try {
+      const res = mode === 'live'
+        ? await callFocus<PackageResponse>({action: 'package', consent: true, profile, direction})
+        : packageOffline(profile, direction);
+      setTasks(res.tasks);
+      setTailor(res.tailor);
+      setResult(applyTailoring(cv, res.tailor.rewrites, res.tailor.emphasis));
+      setPackageTrace(res.trace);
+      setOutreachTrace([]);
+      setPlanFor(direction.id);
+      setEmail(undefined);
+      go(2);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'The plan could not be built.');
+    } finally {
+      setBusy('');
+    }
+  }
+
+  async function fetchJob() {
+    setBusy('Reading job posting…');
+    setError('');
+    try {
+      const r = await fetch('/api/job', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({url})});
+      const d = (await r.json()) as {error?: string; text: string};
+      if (!r.ok) throw new Error(d.error);
+      setJob(d.text);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not read the URL. Paste the description below.');
+    } finally {
+      setBusy('');
+    }
+  }
+
+  async function download(format: 'docx' | 'pdf') {
+    setBusy('Preparing ' + format.toUpperCase() + '…');
+    setError('');
+    try {
+      await downloadCv(format, result);
+    } catch {
+      setError('The download could not be created. Please try again.');
+    } finally {
+      setBusy('');
+    }
+  }
+
+  async function draftEmail(input: OutreachInput) {
+    if (!direction) return;
+    setEmailError('');
+    setBusy('Drafting your email…');
+    try {
+      const res = mode === 'live'
+        ? await callFocus<OutreachResponse>({action: 'outreach', consent: true, profile, direction, input})
+        : outreachOffline(profile, direction, input);
+      setEmail(res.email);
+      setOutreachTrace(res.trace);
+    } catch (e) {
+      setEmailError(e instanceof Error ? e.message : 'The email could not be drafted.');
+    } finally {
+      setBusy('');
+    }
+  }
+
+  return (
+    <div className="app">
+      <aside>
+        <Link className="brand" href="/"><span className="brand-icon"><Layers size={22} /></span>rolecraft<span className="brand-dot">.</span></Link>
+        <div className="workspace-label">YOUR WORKSPACE</div>
+        <div className="nav-active"><FileText size={18} /> Focus plan <span>01</span></div>
+        <div className="aside-note">
+          <div className="mini-orbit"><Sparkles size={20} /></div>
+          <h3>Decide where to put your hours.</h3>
+          <p>Every claim on screen comes from your own text.</p>
+        </div>
+        <div className="aside-bottom">
+          <ShieldCheck size={17} />
+          <span>Private by design<br /><small>Files are read in your browser. Nothing is stored.</small></span>
+        </div>
+      </aside>
+
+      <div className="main">
+        <header>
+          <span>Workspace <span className="slash">/</span> <strong>Focus plan</strong></span>
+          <span className="demo-tag"><span /> HACKATHON EDITION</span>
+        </header>
+        <main>
+          <div className="intro">
+            <div>
+              <div className="eyebrow">DECIDE WHERE TO FOCUS</div>
+              <h1>Know where to focus next<span>.</span></h1>
+              <p>Upload your CV and say how much time you have. Get a direction, a plan that fits your hours, a tailored CV and one email to send.</p>
+            </div>
+            <div className="focus-sample-row">
+              <button className="sample-button" onClick={() => loadSample('product')}><Sparkles size={16} /> Try a sample <ArrowUpRight size={16} /></button>
+              <button className="sample-button" onClick={() => loadSample('clinical')}>Try a non-tech sample <ArrowUpRight size={16} /></button>
+            </div>
+          </div>
+
+          <nav className="steps">
+            {STEPS.map((s, i) => (
+              <button key={s} disabled={i > reached || !!busy} onClick={() => go(i)} className={i === step ? 'current' : i < step ? 'complete' : ''}>
+                <span>{i < step ? <Check size={14} /> : String(i + 1).padStart(2, '0')}</span>{s}
+                {i < STEPS.length - 1 && <ArrowRight className="step-arrow" size={15} />}
+              </button>
+            ))}
+          </nav>
+
+          {error && <div role="alert" className="error">{error}</div>}
+          {busy && <div role="status" className="loading"><span className="spinner" />{busy}</div>}
+
+          {step === 0 && !askConsent && (
+            <ExperienceStep
+              cv={cv} setCV={setCV} projects={projects} setProjects={setProjects} interests={interests} setInterests={setInterests}
+              hours={hours} setHours={setHours} applyBy={applyBy} setApplyBy={setApplyBy} filename={filename} busy={busy} live={live}
+              onUpload={upload} onContinue={start}
+            />
+          )}
+          {step === 0 && askConsent && (
+            <ConsentPanel
+              profile={profile}
+              onAccept={() => { setConsentFor(consentKey); void discover(true); }}
+              onUseOffline={() => { setAskConsent(false); void discover(false); }}
+            />
+          )}
+
+          {step === 1 && (
+            <>
+              <div className="review-heading">
+                <div>
+                  <div className="section-kicker">STEP 02 / DIRECTIONS</div>
+                  <h2>Where your experience points</h2>
+                </div>
+              </div>
+              <Directions directions={directions} selectedId={selectedId} onSelect={selectDirection} mode={mode} />
+              <TracePanel trace={trace} />
+              <div className="focus-footer">
+                <button className="text-button" onClick={() => go(0)}><ArrowLeft size={16} /> Back</button>
+                <button className="primary" disabled={!direction || !!busy} onClick={buildPlan}>
+                  Build my plan{direction ? ` for ${direction.title.toLowerCase()}` : ''} <ArrowRight size={16} />
+                </button>
+              </div>
+            </>
+          )}
+
+          {step === 2 && direction && (
+            <>
+              <PlanView direction={direction} tasks={tasks} hoursPerWeek={hours} weeks={weeks} onHoursChange={setHours} />
+              <TracePanel trace={trace} />
+              <div className="focus-footer">
+                <button className="text-button" onClick={() => go(1)}><ArrowLeft size={16} /> Back</button>
+                <button className="primary" onClick={() => go(3)}>See the tailored CV <ArrowRight size={16} /></button>
+              </div>
+            </>
+          )}
+
+          {step === 3 && direction && (
+            <>
+              <TailoredStep
+                cv={cv} result={result} setResult={setResult} direction={direction} rewrites={tailor.rewrites} questions={tailor.questions}
+                job={job} setJob={setJob} url={url} setUrl={setUrl} busy={busy} tab={tab} setTab={setTab} onFetchJob={fetchJob} onDownload={download}
+              />
+              <div className="focus-footer">
+                <button className="text-button" onClick={() => go(2)}><ArrowLeft size={16} /> Back</button>
+                <button className="primary" onClick={() => go(4)}>Choose your next action <ArrowRight size={16} /></button>
+              </div>
+            </>
+          )}
+
+          {step === 4 && direction && (
+            <>
+              <NextAction task={weekOne} daysToApply={daysToApply} />
+              {mode === 'live' && (
+                <div className="notice">
+                  <ShieldCheck size={18} />
+                  <p>Drafting sends your CV text and the company text you paste below to the analysis service. Nothing is stored.</p>
+                </div>
+              )}
+              <Outreach
+                direction={direction} busy={!!busy} error={emailError} email={email} mode={mode}
+                onGenerate={draftEmail} onBodyChange={(body) => setEmail((e) => (e ? {...e, body} : e))}
+              />
+              <TracePanel trace={trace} />
+              <div className="focus-footer">
+                <button className="text-button" onClick={() => go(3)}><ArrowLeft size={16} /> Back</button>
+              </div>
+            </>
+          )}
+
+          <footer><span>Made for your next move.</span><span>Grounded in evidence. Always yours.</span></footer>
+        </main>
+      </div>
+    </div>
+  );
 }
