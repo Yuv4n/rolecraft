@@ -216,3 +216,13 @@ assert(
 console.log(
   "PASS: machine learning, negation, continuation integrity, conditional rewrites, unresolved requirements and updated projects",
 );
+
+const adjacentHeading =
+  "EXPERIENCE\n• Built Python tools\n• Built SQL dashboards\nEDUCATION\nDegree";
+assert.equal(
+  tailor(adjacentHeading, "SQL"),
+  "EXPERIENCE\n• Built SQL dashboards\n• Built Python tools\nEDUCATION\nDegree",
+);
+console.log(
+  "PASS: section headings end bullet runs without requiring blank lines",
+);
