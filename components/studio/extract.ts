@@ -7,8 +7,8 @@ export async function extractCvText(file: File): Promise<string> {
   const buffer = await file.arrayBuffer();
   let text = '';
   if (/\.docx$/i.test(file.name)) {
-    const mammoth = await import('mammoth');
-    text = (await mammoth.extractRawText({ arrayBuffer: buffer })).value;
+    const { extractDocx } = await import('../../lib/docx-import');
+    text = extractDocx(buffer);
   } else if (/\.pdf$/i.test(file.name)) {
     const pdfjs = await import('pdfjs-dist');
     pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';

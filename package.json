@@ -1,9 +1,9 @@
 {
-  "name": "site-creator-vinext-starter",
+  "name": "rolecraft",
   "version": "0.1.0",
   "private": true,
   "engines": {
-    "node": ">=22.13.0"
+    "node": ">=24.0.0"
   },
   "scripts": {
     "install:ci": "node scripts/install-ci.mjs",
@@ -12,10 +12,15 @@
     "start": "node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js dev --config dist/server/wrangler.json --local --persist-to .wrangler/state --ip 127.0.0.1 --inspector-port 0",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
     "db:generate": "drizzle-kit generate",
-    "test": "node --experimental-strip-types tests/engine.test.mjs && node --experimental-strip-types tests/model.test.mjs && node --experimental-strip-types tests/analysis.test.mjs && node --experimental-strip-types tests/jobs.test.mjs && node --experimental-strip-types tests/export.test.mjs",
     "build:cloudflare": "node scripts/cloudflare.mjs build",
     "deploy:cloudflare": "node scripts/cloudflare.mjs deploy",
-    "check": "tsc --noEmit && npm test && node --experimental-strip-types tests/public-demo.test.mjs"
+    "check": "npm run typecheck && npm run test && npm run lint && npm run format:check",
+    "typecheck": "tsc --noEmit",
+    "test": "node tests/engine.test.mjs && node tests/public-demo.test.mjs && node tests/draft.test.mjs && node tests/docx-import.test.mjs && node --experimental-strip-types tests/model.test.mjs && node --experimental-strip-types tests/analysis.test.mjs && node --experimental-strip-types tests/jobs.test.mjs && node --experimental-strip-types tests/export.test.mjs",
+    "format": "prettier --write app/page.tsx app/globals.css lib/engine.ts lib/analysis/*.ts lib/cv/*.ts lib/jobs/*.ts components/studio/*.tsx app/api/jobs/route.ts lib/draft.ts lib/pdf-font.ts lib/docx-import.ts tests/*.mjs",
+    "format:check": "prettier --check app/page.tsx app/globals.css lib/engine.ts lib/analysis/*.ts lib/cv/*.ts lib/jobs/*.ts components/studio/*.tsx app/api/jobs/route.ts lib/draft.ts lib/pdf-font.ts lib/docx-import.ts tests/*.mjs",
+    "benchmark": "node tests/benchmark.mjs",
+    "audit:runtime": "npm audit --omit=dev --audit-level=high"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
@@ -28,51 +33,55 @@
     "docx": "^9.11.0",
     "drizzle-orm": "0.45.2",
     "embla-carousel-react": "^8.6.0",
+    "fflate": "0.8.3",
     "input-otp": "^1.4.2",
     "jspdf": "^4.2.1",
     "lucide-react": "^1.31.0",
-    "mammoth": "^1.13.0",
-    "next": "16.3.4",
+    "next": "16.3.8",
     "next-themes": "^0.4.6",
     "pdfjs-dist": "^6.4.299",
     "radix-ui": "^1.6.7",
-    "react": "19.2.6",
+    "react": "19.2.8",
     "react-day-picker": "^10.0.1",
-    "react-dom": "19.2.6",
+    "react-dom": "19.2.8",
     "react-hook-form": "^7.85.0",
     "react-resizable-panels": "^4.12.2",
     "recharts": "^3.8.0",
     "sonner": "^2.0.8",
     "tailwind-merge": "3.6.0",
     "vaul": "^1.1.2",
-    "zod": "^3.25.76"
+    "zod": "^3.25.76",
+    "mammoth": "^1.13.0"
   },
   "devDependencies": {
-    "@cloudflare/vite-plugin": "1.37.1",
-    "@cloudflare/workers-types": "4.20260515.1",
+    "@cloudflare/vite-plugin": "1.64.0",
+    "@cloudflare/workers-types": "5.20261016.1",
     "@tailwindcss/postcss": "4.2.1",
     "@types/node": "22.19.19",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
     "@vitejs/plugin-react": "6.0.2",
     "@vitejs/plugin-rsc": "0.5.26",
+    "@xmldom/xmldom": "0.9.12",
     "drizzle-kit": "0.31.10",
     "eslint": "9.39.4",
-    "eslint-config-next": "16.3.4",
+    "eslint-config-next": "16.3.8",
     "json-rpc-2.0": "1.7.1",
+    "prettier": "3.9.10",
     "raw-body": "3.0.2",
-    "react-server-dom-webpack": "19.2.6",
+    "react-server-dom-webpack": "19.2.8",
     "tailwindcss": "4.2.1",
     "tw-animate-css": "^1.4.0",
     "typescript": "5.9.3",
     "vinext": "1.0.0-beta.5",
-    "vite": "8.0.13",
-    "wrangler": "4.92.0"
+    "vite": "8.3.4",
+    "wrangler": "4.151.1"
   },
   "type": "module",
   "overrides": {
     "miniflare": {
-      "sharp": "0.35.4"
-    }
+      "sharp": "0.35.5"
+    },
+    "image-size": "2.0.3"
   }
 }

@@ -1,9 +1,17 @@
-'use client';
-import { createContext, useContext } from 'react';
-import type { Change, Decision, SavedRole, Snapshot, Variant, Workspace } from '../../lib/cv/types';
-import type { Action, Effective } from '../../lib/cv/workspace';
+"use client";
+import { createContext, useContext } from "react";
+import type {
+  Change,
+  Decision,
+  SavedRole,
+  Snapshot,
+  Variant,
+  Workspace,
+} from "../../lib/cv/types";
+import type { Action, Effective } from "../../lib/cv/workspace";
 
-export type Workflow = 'home' | 'careers' | 'tailor' | 'roles' | 'plan' | 'review';
+export type Workflow =
+  "home" | "careers" | "tailor" | "roles" | "plan" | "review";
 
 export interface StudioApi {
   ws: Workspace;
@@ -28,7 +36,7 @@ export interface StudioApi {
   viewVersionId: string | null;
   setViewVersionId: (id: string | null) => void;
   /** Opens the document panel on a tab. */
-  showDoc: (tab?: 'preview' | 'content' | 'layout' | 'history') => void;
+  showDoc: (tab?: "preview" | "content" | "layout" | "history") => void;
   notify: (message: string) => void;
 }
 
@@ -36,6 +44,6 @@ export const StudioContext = createContext<StudioApi | null>(null);
 
 export function useStudio(): StudioApi {
   const api = useContext(StudioContext);
-  if (!api) throw new Error('useStudio must be used inside the studio');
+  if (!api) throw new Error("useStudio must be used inside the studio");
   return api;
 }

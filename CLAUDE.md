@@ -11,24 +11,27 @@ Read README.md for setup, architecture, privacy constraints and known limitation
 
 ## Commands
 
-- Node 22.13+ (24 recommended).
+- Node 24+; use `.node-version`.
 - `npm ci`
 - `npm run dev` (use the printed URL, usually port 5173)
-- `npx tsc --noEmit`
-- `npm test`
-- `npm run build`
+- `npm run check`
+- `npm run benchmark`
+- `npm run build:cloudflare`
 
 No API keys or environment variables are required for the current demo.
 
 ## Important files
 
-- `components/studio/Studio.tsx`: shell, intake, goal chooser and shared state. One view file per workflow beside it, plus `DocPanel.tsx` (preview, content, layout, history).
+- `components/studio/Studio.tsx`: shell, intake, goal chooser and shared state. One view file per workflow beside it, plus `DocPanel.tsx` (preview, content, layout, history). `shared.tsx` holds the shared Tabs, Alert and change cards.
+- `app/page.tsx`: renders the studio. `app/globals.css`: responsive, accessible interface (AA greys, 44px targets, one focus style).
 - `lib/cv/`: data model (`types.ts`), parser, renderer, edit operations, workspace reducer, exports. Content and layout stay separate; keep it so.
 - `lib/analysis/`: `review.ts`, `tailor.ts`, `roles.ts`, `plan.ts`, `playbook.ts`, `careers.ts` (paths, industries, roles), `jobmatch.ts` (ranks postings against the CV in the browser).
-- `lib/jobs/` and `app/api/jobs/route.ts`: open job feed parsers, fixed host allowlist, limiter and sample postings. The route must never accept CV content or caller-supplied URLs.
-- `lib/engine.ts`: vocabulary and term matching.
-- `app/globals.css`: responsive interface. `app/api/job/route.ts`: public job URL extraction.
-- `tests/`: engine, model and analysis suites. Library files must stay erasable TypeScript with `.ts` import extensions so Node can run them.
+- `lib/jobs/` and `app/api/jobs/route.ts`: open job feed parsers, fixed host allowlist, limiter and sample postings. The route is off unless `JOB_FEEDS_ENABLED` is `true`, and it must never accept CV content or caller-supplied URLs.
+- `app/api/job/route.ts`: rejects URL extraction in the public demo.
+- `lib/engine.ts`: vocabulary, negation-aware term matching and the original rubric.
+- `lib/docx-import.ts`: bounded browser DOCX extraction. `lib/draft.ts`: device draft validation (tested, not yet used by the studio).
+- `lib/pdf-font.ts`: checks glyph coverage before the PDF export embeds Noto Sans.
+- `tests/`: engine, model, analysis, jobs and export suites. Library files must stay erasable TypeScript with `.ts` import extensions so Node can run them.
 
 ## Product constraints
 

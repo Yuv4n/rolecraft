@@ -1,4 +1,4 @@
-import Studio from '../components/studio/Studio';
+import Studio from "../components/studio/Studio";
 
 export default function Home() {
   return <Studio />;
