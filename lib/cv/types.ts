@@ -5,10 +5,25 @@
 // parent. Layout holds sibling order, typography, spacing, alignment, columns
 // and page breaks. Either side can change without touching the other.
 
-export const ROOT = 'root';
+export const ROOT = "root";
 
-export type NodeType = 'section' | 'name' | 'headline' | 'contact' | 'entry' | 'bullet' | 'paragraph' | 'skills';
-export type SectionKind = 'header' | 'summary' | 'experience' | 'education' | 'skills' | 'projects' | 'other';
+export type NodeType =
+  | "section"
+  | "name"
+  | "headline"
+  | "contact"
+  | "entry"
+  | "bullet"
+  | "paragraph"
+  | "skills";
+export type SectionKind =
+  | "header"
+  | "summary"
+  | "experience"
+  | "education"
+  | "skills"
+  | "projects"
+  | "other";
 
 export interface ContentNode {
   id: string;
@@ -29,16 +44,24 @@ export interface Content {
   seq: number;
 }
 
-export type Role = 'name' | 'headline' | 'contact' | 'sectionTitle' | 'entry' | 'bullet' | 'paragraph' | 'skills';
+export type Role =
+  | "name"
+  | "headline"
+  | "contact"
+  | "sectionTitle"
+  | "entry"
+  | "bullet"
+  | "paragraph"
+  | "skills";
 
 export interface TextStyle {
-  font: 'sans' | 'serif';
+  font: "sans" | "serif";
   /** Points. */
   size: number;
   bold: boolean;
   italic: boolean;
   color: string;
-  align: 'left' | 'center' | 'right' | 'justify';
+  align: "left" | "center" | "right" | "justify";
   /** Points. */
   spaceBefore: number;
   spaceAfter: number;
@@ -59,7 +82,7 @@ export interface NodeLayout extends Partial<TextStyle> {
 }
 
 export interface PageSetup {
-  size: 'A4' | 'Letter';
+  size: "A4" | "Letter";
   /** Millimetres. */
   margins: { top: number; right: number; bottom: number; left: number };
   columns: 1 | 2;
@@ -81,20 +104,58 @@ export interface Snapshot {
 }
 
 export type Change =
-  | { kind: 'text'; id: string; nodeId: string; before: string; after: string; beforeParts?: string[]; afterParts?: string[]; reason: string; userSupplied?: boolean }
-  | { kind: 'order'; id: string; parentId: string; before: string[]; after: string[]; reason: string }
-  | { kind: 'layout'; id: string; patches: { nodeId: string; before: NodeLayout; after: NodeLayout }[]; page?: { before: PageSetup; after: PageSetup }; styles?: { role: Role; before: Partial<TextStyle>; after: Partial<TextStyle> }[]; reason: string }
-  | { kind: 'add'; id: string; parentId: string; afterId?: string; text: string; glyph?: string; section?: { title: string; kind: SectionKind }; reason: string; userSupplied?: boolean }
-  | { kind: 'batch'; id: string; changes: Change[]; reason: string };
+  | {
+      kind: "text";
+      id: string;
+      nodeId: string;
+      before: string;
+      after: string;
+      beforeParts?: string[];
+      afterParts?: string[];
+      reason: string;
+      userSupplied?: boolean;
+    }
+  | {
+      kind: "order";
+      id: string;
+      parentId: string;
+      before: string[];
+      after: string[];
+      reason: string;
+    }
+  | {
+      kind: "layout";
+      id: string;
+      patches: { nodeId: string; before: NodeLayout; after: NodeLayout }[];
+      page?: { before: PageSetup; after: PageSetup };
+      styles?: {
+        role: Role;
+        before: Partial<TextStyle>;
+        after: Partial<TextStyle>;
+      }[];
+      reason: string;
+    }
+  | {
+      kind: "add";
+      id: string;
+      parentId: string;
+      afterId?: string;
+      text: string;
+      glyph?: string;
+      section?: { title: string; kind: SectionKind };
+      reason: string;
+      userSupplied?: boolean;
+    }
+  | { kind: "batch"; id: string; changes: Change[]; reason: string };
 
-export type Decision = 'accepted' | 'rejected';
+export type Decision = "accepted" | "rejected";
 
 export interface CvVersion {
   id: string;
   label: string;
   createdAt: number;
   parentId: string | null;
-  origin: 'import' | 'fork' | 'edit' | 'accepted-changes' | 'restore';
+  origin: "import" | "fork" | "edit" | "accepted-changes" | "restore";
   note: string;
   snapshot: Snapshot;
 }

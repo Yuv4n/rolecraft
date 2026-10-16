@@ -1,17 +1,19 @@
 # Rolecraft
 
+[Open the live demo](https://rolecraft.yuv4n-apps.workers.dev/)
+
 A hackathon CV studio built with React 19, TypeScript and Vinext on Vite. The server route deploys to Cloudflare Workers through Sites.
 
 ## Run locally
 
-Use Node.js 22.13 or later (Node 24 recommended).
+Use Node.js 24 or later. `.node-version` pins the CI major version.
 
 ```sh
 npm ci
 npm run dev
 ```
 
-Open the Local URL printed by Vite, usually http://127.0.0.1:5173. Click **Try a sample** to populate the CV and job description, then continue through the four steps. The sample also works without any external job website.
+Open the Local URL printed by Vite, usually http://127.0.0.1:5173. Click Try a sample to populate the CV and job description, then continue through the four steps. The sample also works without any external job website.
 
 ## Environment variables
 
@@ -20,14 +22,12 @@ None required. No AI provider keys are used. The demo uses deterministic matchin
 ## Checks
 
 ```sh
-npx tsc --noEmit
-npm test
-node --experimental-strip-types tests/public-demo.test.mjs
-npm run build
-npm run check   # type check, all suites and the public-demo test
+npm run check
+npm run build:cloudflare
+npm run benchmark
 ```
 
-`npm test` runs six suites: the engine rubric and the deploy-branch regression tests (`tests/engine.test.mjs`), the data model, versions and variants (`tests/model.test.mjs`), review, grounding, role fit and plan (`tests/analysis.test.mjs`), job feeds, safety rules, ranking and career paths (`tests/jobs.test.mjs`), PDF and DOCX export (`tests/export.test.mjs`). `tests/public-demo.test.mjs` checks that URL fetching stays off.
+The test script also runs the data model, review, job feed and export suites (`tests/model.test.mjs`, `tests/analysis.test.mjs`, `tests/jobs.test.mjs`, `tests/export.test.mjs`).
 
 ## Five starting points
 
@@ -74,7 +74,7 @@ This is a working demo with bounded heuristics. The vocabulary includes product,
 
 Job URL fetching is disabled for the public demo. Add production egress controls and rate limiting before restoring it. Live job feeds (`/api/jobs`) are also off by default and answer HTTP 410 without any outbound request until `JOB_FEEDS_ENABLED` is set to `true`.
 
-Scanned PDFs need OCR outside this app. Complex layouts may extract out of order. Exports use the layout stored with the CV, which starts as a single column and can be changed in the Layout tab. PDF exports embed the openly licensed Noto Sans font. The exporter checks character coverage and directs users to DOCX if the text includes unsupported characters. Review exports before sending. Downloads were exercised in the browser; DOCX text was re-extracted to check preservation.
+Scanned PDFs need OCR outside this app. Complex layouts may extract out of order. Exports use a plain single-column layout. PDF exports embed the openly licensed Noto Sans font. The exporter checks character coverage and directs users to DOCX if the text includes unsupported characters. Review exports before sending. Downloads were exercised in the browser; DOCX text was re-extracted to check preservation.
 
 No server database, accounts, LLM integration or persistent uploads are included. The standalone Cloudflare app is public. The separate Sites deployment remains owner-private by default.
 
@@ -115,7 +115,7 @@ with this check required before merging if deployments should wait for checks.
 
 ## Scoring and matching limits
 
-Review scores start at 100 per group and lose points for the findings listed under it, with at most 40 points lost per check. Relevance is the share of a role's recognised terms that the CV supports, and required or uncategorised terms count twice as much as preferred terms. Skill mentions that are negated or aspirational ("no SQL experience", "learning SQL") do not count as evidence anywhere, including role fit, career paths and posting ranking. Nothing is saved to the device unless the user downloads a workspace file.
+Review scores start at 100 per group and lose points for the findings listed under it, with at most 40 points lost per check. Relevance is the share of a role's recognised terms that the CV supports. Skill mentions that are negated or aspirational ("no SQL experience", "learning SQL") do not count as evidence anywhere, including role fit, career paths and posting ranking. The studio keeps work in the browser tab and saves nothing to the device unless the user downloads a workspace file. `lib/draft.ts` (opt-in device drafts) is retained and tested, but the studio does not use it yet.
 
 ## Optional GitHub automatic deployment
 
@@ -141,3 +141,28 @@ Regression tests cover short and paragraph-based CVs, empty-content scores,
 negation and affirmative clauses, grouped projects and PDF font coverage.
 Automated checks do not establish recruiter accuracy or accessibility compliance.
 Niche suggestions use predefined categories rather than live labour-market data.
+
+
+## Repository checks and performance
+
+`npm run check` runs TypeScript, regression tests, ESLint and formatting checks.
+`npm run format` formats the application page, styles and analysis modules.
+Generated TypeScript build metadata and vendored browser assets are excluded from
+source linting. CI cancels superseded checks and uses the same Node major version
+as local development.
+
+The job model is parsed once per description. CV line matches are reused across
+requirements, ratings and niche suggestions. The final editor updates its own
+evidence analysis and project recommendations. `npm run benchmark` exercises
+near-limit CV and job text locally; timings vary by hardware.
+
+Indented continuation lines move with their bullet. Ambiguous unindented
+continuations keep the source run in order. Conditional achievements retain their
+wording. Requirements involving licences, degrees or experience length are flagged
+for manual assessment and receive no automatic relevance credit. Scores with
+unassessed requirements are provisional. The engine cannot verify eligibility or
+truthfulness, and the vocabulary remains limited.
+
+DOCX extraction ignores deleted tracked-change text and rejects XML declarations.
+Expanded selected document parts are capped at 2 MB, and extracted text is capped
+at 30,000 characters. Scanned documents still require pasted text or external OCR.
