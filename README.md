@@ -43,3 +43,4 @@ Job extraction reads static HTML. Login walls, redirects, JavaScript-only job bo
 Scanned PDFs need OCR outside this app. Complex layouts may extract out of order. Exports use a plain single-column layout. The PDF uses built-in Helvetica and supports Western text best; some Unicode characters may not render correctly. Review exports before sending. Downloads were exercised in the browser; DOCX text was re-extracted to check preservation.
 
 No database, accounts, history, LLM integration or persistent uploads are included. The hosted Site is owner-private by default.
+
