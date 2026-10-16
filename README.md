@@ -43,3 +43,7 @@ Job extraction reads static HTML. Login walls, redirects, JavaScript-only job bo
 Scanned PDFs need OCR outside this app. Complex layouts may extract out of order. Exports use a plain single-column layout. The PDF uses built-in Helvetica and supports Western text best; some Unicode characters may not render correctly. Review exports before sending. Downloads were exercised in the browser; DOCX text was re-extracted to check preservation.
 
 No database, accounts, history, LLM integration or persistent uploads are included. The hosted Site is owner-private by default.
+
+## Working across Claude sessions
+
+Clone the GitHub repository in each environment and ask Claude to read `CLAUDE.md` first. Give each task its own branch. For sessions on the same machine, use separate clones or `git worktree add ../rolecraft-task -b task-name` so concurrent edits do not share a working directory. Commit and push completed work; fetch and merge through pull requests before starting dependent tasks. Git stores source and handoff notes, not chat history.
