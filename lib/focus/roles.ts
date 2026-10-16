@@ -137,7 +137,7 @@ export const roleFamilies: RoleFamily[] = [
       req('Synthesising findings into insight', 'synthesis', 'insight', 'themes'),
       req('Presenting findings to decision makers', 'presented', 'stakeholder', 'report'),
     ],
-    adjacent: ['product-designer', 'service-designer', 'product-analyst', 'policy-analyst'],
+    adjacent: ['product-designer', 'service-designer', 'product-analyst', 'policy-analyst', 'researcher'],
     searchTitles: ['UX Researcher', 'User Researcher', 'Customer Insight Analyst'],
   },
   {
@@ -332,7 +332,7 @@ export const roleFamilies: RoleFamily[] = [
       req('Clear documentation of findings', 'documentation', 'report', 'records'),
       req('Raising issues with managers', 'escalat', 'incident', 'stakeholder'),
     ],
-    adjacent: ['clinical-research', 'financial-analyst', 'policy-analyst'],
+    adjacent: ['clinical-research', 'financial-analyst', 'policy-analyst', 'legal-assistant'],
     searchTitles: ['Compliance Analyst', 'Risk Analyst', 'Governance Officer'],
   },
   {
@@ -382,6 +382,58 @@ export const roleFamilies: RoleFamily[] = [
     ],
     adjacent: ['people-analyst', 'training-facilitator', 'project-coordinator'],
     searchTitles: ['Talent Coordinator', 'Recruitment Coordinator', 'Resourcer'],
+  },
+  {
+    id: 'hospitality-manager', title: 'Kitchen or hospitality manager', field: 'Hospitality and retail',
+    summary: 'Runs a kitchen, restaurant or venue day to day: the team, the stock, the standards and the guest experience.',
+    requirements: [
+      req('Leading a team through service', 'brigade', 'front of house', 'shift', 'the pass', 'service', 'rota'),
+      req('Stock, ordering and cost control', 'stock', 'ordering', 'menu costing', 'food cost', 'waste', 'supplier', 'gp'),
+      req('Food safety and hygiene compliance', 'food safety', 'allergen', 'hygiene', 'haccp', 'health and safety'),
+      req('Training and developing staff', 'trained', 'apprentice', 'mentoring', 'coached', 'induction'),
+      req('Guest experience and complaints', 'guest', 'customer', 'complaint', 'feedback'),
+    ],
+    adjacent: ['operations-analyst', 'supply-chain-analyst', 'training-facilitator', 'project-coordinator'],
+    searchTitles: ['Kitchen Manager', 'Head Chef', 'Operations Manager Hospitality'],
+  },
+  {
+    id: 'legal-assistant', title: 'Paralegal or legal analyst', field: 'Legal',
+    summary: 'Supports lawyers with research, drafting and document-heavy work, and keeps matters organised and compliant.',
+    requirements: [
+      req('Drafting and reviewing contracts', 'contract', 'drafted', 'drafting', 'clause'),
+      req('Legal research and briefing notes', 'legal research', 'case law', 'briefing', 'statute'),
+      req('Due diligence and document review', 'due diligence', 'document review', 'disclosure', 'bundle'),
+      req('Advising and working with clients', 'advised clients', 'client', 'instructions'),
+      req('Regulation and compliance', 'compliance', 'regulat', 'gdpr', 'governance'),
+    ],
+    adjacent: ['risk-compliance', 'policy-analyst', 'project-coordinator'],
+    searchTitles: ['Paralegal', 'Legal Assistant', 'Contracts Analyst'],
+  },
+  {
+    id: 'sales-development', title: 'Sales or business development', field: 'Sales',
+    summary: 'Finds and wins customers, and keeps the pipeline healthy against a target.',
+    requirements: [
+      req('Hitting a sales target', 'target', 'quota', 'revenue', 'sales'),
+      req('Pipeline and lead generation', 'pipeline', 'lead generation', 'prospecting', 'cold calling', 'leads'),
+      req('Using a CRM', 'crm', 'salesforce', 'hubspot'),
+      req('Negotiating and closing', 'negotiat', 'closing', 'deal', 'contract'),
+      req('Building client relationships', 'account', 'client', 'relationship', 'renewal'),
+    ],
+    adjacent: ['customer-success-manager', 'marketing-analyst', 'talent-coordinator'],
+    searchTitles: ['Business Development Representative', 'Sales Executive', 'Account Executive'],
+  },
+  {
+    id: 'researcher', title: 'Market or social researcher', field: 'Research',
+    summary: 'Designs studies, collects and analyses data from people, and reports what it means.',
+    requirements: [
+      req('Designing surveys and questionnaires', 'survey', 'questionnaire', 'sampling', 'interview'),
+      req('Statistical analysis', 'spss', 'statistics', 'regression', 'excel', 'significance'),
+      req('Qualitative research', 'focus group', 'interview', 'thematic analysis', 'transcri'),
+      req('Reporting findings to an audience', 'dissertation', 'report', 'presented', 'findings', 'briefing'),
+      req('Research ethics and data protection', 'ethics', 'consent', 'gdpr', 'confidential'),
+    ],
+    adjacent: ['ux-researcher', 'policy-analyst', 'people-analyst', 'data-analyst'],
+    searchTitles: ['Research Assistant', 'Research Executive', 'Insight Analyst'],
   },
 ];
 

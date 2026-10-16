@@ -24,6 +24,10 @@ function matchTerm(text: string, term: string): boolean {
 
 const strip = (line: string) => line.replace(BULLET, '').trim();
 
+// Words that show up in almost every CV. They count for little on their own, so a role is not matched only because a
+// person "managed" something or "reported" on it.
+const GENERIC = new Set(['report', 'budget', 'team', 'managed', 'coordinated', 'metrics', 'kpi', 'improvement', 'resource', 'schedule', 'documentation', 'stakeholder', 'led', 'event', 'client', 'customer', 'mentor', 'service', 'target']);
+
 type Scored = {family: RoleFamily; score: number; rank: number; touched: {req: RoleRequirement; terms: string[]; line?: string; listOnly?: boolean}[]};
 
 function profileLines(p: Profile): string[] {
@@ -41,12 +45,15 @@ function score(family: RoleFamily, lines: string[], text: string): Scored {
   let total = 0;
   const touched: Scored['touched'] = [];
   for (const req of family.requirements) {
-    const terms = req.terms.filter((t) => matchTerm(text, t));
+    const found = req.terms.filter((t) => matchTerm(text, t));
+    const specific = found.filter((t) => !GENERIC.has(t));
+    // A requirement counts only when something specific matched, or at least two generic words did.
+    const terms = specific.length || found.length >= 2 ? found : [];
     if (!terms.length) {
       touched.push({req, terms});
       continue;
     }
-    total += 1 + Math.min(1, (terms.length - 1) * 0.25);
+    total += (specific.length ? 1 : 0.5) + Math.min(1, (terms.length - 1) * 0.25);
     // A comma-separated skills list matches many terms but says nothing about what was done, so it ranks last.
     const best = lines
       .map((l) => ({l, hits: req.terms.filter((t) => matchTerm(l, t)).length}))

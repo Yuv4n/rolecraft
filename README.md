@@ -65,7 +65,7 @@ This was checked with an axe-core audit of every step at 1280 px and 390 px (no 
 When `ANTHROPIC_API_KEY` is set, `/api/focus` runs an orchestrator with five specialist agents, each with one role, one output schema and one validator (`lib/focus/orchestrator.ts`).
 
 - The evidence reader extracts the lines that show what the user has done.
-- The direction mapper maps that evidence onto a curated list of about 30 role families (`lib/focus/roles.ts`) and states the gaps.
+- The direction mapper maps that evidence onto a curated list of about 35 role families (`lib/focus/roles.ts`) and states the gaps.
 - The gap planner proposes tasks with hour estimates. It runs in parallel with the CV tailor.
 - The CV tailor proposes wording changes, emphasis and questions. It may not add facts.
 - The outreach writer drafts the email and lists every claim with its source.
@@ -106,7 +106,7 @@ The live pipeline was tested against a local mock of the Messages API, which che
 
 There are no recorded sample results. With a key, the sample buttons call the model. Without one, they use the offline engine.
 
-Roles are drawn from a curated list of about 30 families. The app does not search live job listings. It suggests job titles to search for.
+Roles are drawn from a curated list of about 35 families. The app does not search live job listings. It suggests job titles to search for.
 
 The consent flag on `/api/focus` is set by the browser and the server only checks that it is present. The route accepts same-origin requests only, caps the body at 120 KB (checked while reading, not after) and allows 12 requests a minute per client address. Each Worker isolate keeps its own count, so this slows casual abuse and is not a substitute for platform rate limiting. There is no authentication, and a `package` request makes two model calls. A key on a public deployment can still be used by anyone who finds the URL. Keep the site owner-private, or add access control and platform rate limiting, before sharing it widely. 
 

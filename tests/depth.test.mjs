@@ -7,7 +7,7 @@ import {itemLines, isHeading} from '../lib/focus/bullets.ts';
 import {GERUND_TO_PAST, REPLACEMENT_VERBS} from '../lib/focus/verbs.ts';
 import {applyTailoring, checkRewrite, isWholeLine, normalise, unseenNumbers} from '../lib/focus/grounding.ts';
 import {discoverOffline, packageOffline} from '../lib/focus/offline.ts';
-import {teacher, accountant, marketer, plain} from './fixtures/cvs.mjs';
+import {teacher, accountant, marketer, plain, softwareEngineer, chef, lawyer, graduate, nonsense} from './fixtures/cvs.mjs';
 
 let checks = 0;
 const ok = (v, m) => { checks++; assert.ok(v, m); };
@@ -150,6 +150,33 @@ for (const line of notMetric) ok(!hasMetric(line), 'does not count: ' + line);
   eq(rate(datesOnly, 'x')[1].score, 0, 'a CV whose only numbers are years scores zero for impact');
   const withResult = datesOnly.replace('weekly figures in 2021 and 2022', 'weekly figures, cutting errors by 30%');
   ok(rate(withResult, 'x')[1].score > 0, 'a real result raises it');
+}
+
+// --- demo robustness: a CV from almost any field gets a sensible first direction from the offline engine
+{
+  const expected = [
+    [sampleCV, ['product-analyst'], 'product analyst'],
+    [sampleNurseCV, ['clinical-informatics'], 'nurse'],
+    [teacher, ['training-facilitator', 'learning-designer'], 'teacher'],
+    [accountant, ['financial-analyst'], 'accountant'],
+    [marketer, ['marketing-analyst', 'content-marketer'], 'marketer'],
+    [plain, ['customer-success-manager'], 'plain-text customer service'],
+    [softwareEngineer, ['frontend-developer'], 'software engineer'],
+    [chef, ['hospitality-manager'], 'chef'],
+    [lawyer, ['legal-assistant'], 'trainee solicitor'],
+    [graduate, ['researcher'], 'psychology graduate'],
+  ];
+  for (const [cv, ids, label] of expected) {
+    const profile = {cv, projects: '', interests: '', hoursPerWeek: 4, applyBy: '2026-11-27'};
+    const directions = discoverOffline(profile).directions;
+    ok(directions.length >= 1 && ids.includes(directions[0].roleFamilyId), `${label}: primary is ${ids.join(' or ')} (got ${directions[0]?.roleFamilyId})`);
+    for (const d of directions) for (const r of d.reasons) ok(isWholeLine(r.quote, cv) || cv.includes(r.quote.slice(0, 20)), `${label}: reason is quoted from the CV`);
+    const ids2 = new Set(directions.map((d) => d.roleFamilyId));
+    eq(ids2.size, directions.length, `${label}: no direction is repeated`);
+  }
+  eq(discoverOffline({cv: nonsense, projects: '', interests: '', hoursPerWeek: 4, applyBy: '2026-11-27'}).directions, [], 'text with no recognisable experience gives no directions, not a guess');
+  const generic = 'I managed a team and wrote a report on the budget for the event.';
+  eq(discoverOffline({cv: generic.repeat(3), projects: '', interests: '', hoursPerWeek: 4, applyBy: '2026-11-27'}).directions, [], 'generic words alone do not produce a direction');
 }
 
 // --- the score rubric is explained
