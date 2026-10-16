@@ -1,6 +1,7 @@
 import type { Snapshot } from './types.ts';
 import { renderBlocks } from './render.ts';
 import type { RenderBlock } from './render.ts';
+import { missingGlyphs } from '../pdf-font.ts';
 
 export const pageSize = { A4: { w: 210, h: 297 }, Letter: { w: 215.9, h: 279.4 } } as const;
 export const PT_TO_MM = 25.4 / 72;
@@ -18,11 +19,36 @@ function hexToRgb(hex: string): [number, number, number] {
   return m ? [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16)] : [17, 17, 17];
 }
 
-export async function exportPdf(snap: Snapshot): Promise<Blob> {
+const standardFontText = /^[\x20-\x7E\xA0-\xFF\u2013\u2014\u2018\u2019\u201C\u201D\u2022\u2026\u20AC\n]*$/;
+
+async function loadUnicodeFont(): Promise<ArrayBuffer> {
+  const res = await fetch('/fonts/NotoSans-Regular.ttf');
+  if (!res.ok) throw new Error('The PDF font could not be loaded.');
+  return res.arrayBuffer();
+}
+
+/** Exports a PDF. Text outside the standard Latin set uses an embedded Noto Sans, and the export fails loudly if a glyph is still missing. */
+export async function exportPdf(snap: Snapshot, loadFont: () => Promise<ArrayBuffer> = loadUnicodeFont): Promise<Blob> {
   const { jsPDF } = await import('jspdf');
+  const blocks = renderBlocks(snap);
+  const allText = blocks.map((b) => b.prefix + b.text).join('\n');
+  const unicode = !standardFontText.test(allText);
+  let fontBuffer: ArrayBuffer | null = null;
+  if (unicode) {
+    fontBuffer = await loadFont();
+    const missing = missingGlyphs(fontBuffer, allText);
+    if (missing.length) throw new Error(`The PDF font cannot show these characters: ${missing.slice(0, 12).join(' ')}. Replace them or export DOCX.`);
+  }
   const { page } = snap.layout;
   const dims = pageSize[page.size];
   const pdf = new jsPDF({ unit: 'mm', format: page.size === 'A4' ? 'a4' : 'letter' });
+  if (fontBuffer) {
+    const bytes = new Uint8Array(fontBuffer);
+    let binary = '';
+    for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+    pdf.addFileToVFS('NotoSans-Regular.ttf', btoa(binary));
+    for (const style of ['normal', 'bold', 'italic', 'bolditalic']) pdf.addFont('NotoSans-Regular.ttf', 'NotoSans', style);
+  }
   const { margins: m } = page;
   const cols = page.columns;
   const colW = (dims.w - m.left - m.right - page.columnGap * (cols - 1)) / cols;
@@ -39,12 +65,12 @@ export async function exportPdf(snap: Snapshot): Promise<Blob> {
     const s = b.style;
     if (b.pageBreakBefore && !(atTop && col === 0)) newPage();
     else if (b.columnBreakBefore && !atTop) nextColumn();
-    pdf.setFont(pdfFont[s.font], s.bold && s.italic ? 'bolditalic' : s.bold ? 'bold' : s.italic ? 'italic' : 'normal');
+    pdf.setFont(fontBuffer ? 'NotoSans' : pdfFont[s.font], s.bold && s.italic ? 'bolditalic' : s.bold ? 'bold' : s.italic ? 'italic' : 'normal');
     pdf.setFontSize(s.size);
     pdf.setTextColor(...hexToRgb(s.color));
     const lineH = s.size * s.lineHeight * PT_TO_MM;
     const before = atTop ? 0 : s.spaceBefore * PT_TO_MM;
-    const wrapped: string[] = pdf.splitTextToSize(pdfSafe(b.text), Math.max(10, colW - s.indent));
+    const wrapped: string[] = pdf.splitTextToSize((unicode ? b.text : pdfSafe(b.text)), Math.max(10, colW - s.indent));
     const needed = lineH * (b.role === 'sectionTitle' || b.role === 'entry' ? Math.min(wrapped.length + 1, 3) : 1);
     if (y + before + needed > bottom) nextColumn();
     else y += before;
@@ -52,7 +78,7 @@ export async function exportPdf(snap: Snapshot): Promise<Blob> {
     wrapped.forEach((line, i) => {
       if (y + lineH > bottom) nextColumn();
       const baseline = y + s.size * PT_TO_MM * 0.9;
-      if (i === 0 && b.prefix) pdf.text(pdfSafe(b.prefix), x0 + Math.max(0, s.indent - 3.5), baseline);
+      if (i === 0 && b.prefix) pdf.text(unicode ? b.prefix : pdfSafe(b.prefix), x0 + Math.max(0, s.indent - 3.5), baseline);
       const left = x0 + s.indent;
       const width = colW - s.indent;
       if (s.align === 'center') pdf.text(line, left + width / 2, baseline, { align: 'center' });
@@ -65,7 +91,7 @@ export async function exportPdf(snap: Snapshot): Promise<Blob> {
     y += s.spaceAfter * PT_TO_MM;
   };
 
-  for (const b of renderBlocks(snap)) draw(b);
+  for (const b of blocks) draw(b);
   return pdf.output('blob');
 }
 

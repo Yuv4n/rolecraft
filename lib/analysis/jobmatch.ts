@@ -1,7 +1,7 @@
 import type { Snapshot } from '../cv/types.ts';
 import { nodeText, renderText } from '../cv/render.ts';
 import { sectionOf } from '../cv/ops.ts';
-import { analyse, catalog, has } from '../engine.ts';
+import { analyse, catalog, supports } from '../engine.ts';
 import type { JobPosting } from '../jobs/types.ts';
 import { contentWords } from './language.ts';
 import { yearsOfExperience } from './careers.ts';
@@ -30,7 +30,7 @@ function cvEvidence(snap: Snapshot): Map<string, { quote: string; listedOnly: bo
     const text = nodeText(node, snap.layout);
     const listedOnly = node.type === 'skills' || sectionOf(snap, node.id)?.kind === 'skills';
     for (const term of catalog) {
-      if (!has(text, term)) continue;
+      if (!supports(text, term)) continue;
       const prev = index.get(term);
       if (!prev || (prev.listedOnly && !listedOnly)) index.set(term, { quote: text, listedOnly });
     }
