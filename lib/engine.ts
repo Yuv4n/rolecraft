@@ -48,10 +48,32 @@ export function has(text: string, term: string) {
  return (aliases[term] ?? [term]).some(t =>
   new RegExp('(?<![a-z0-9])' + escape(t) + 's?(?![a-z0-9])', 'i').test(text));
 }
-// Conservative, clause-level negation: uncertain claims are not positive evidence.
+// Restrict negative claims to their local phrase. An explicit affirmative
+// action starts new evidence even when it appears in the same sentence.
 export function supports(text: string, term: string) {
- return text.split(/\n|[;!?]|\.(?:\s|$)|\bbut\b|\bhowever\b/i).some(clause =>
-  has(clause, term) && !/\b(no|not|never|without|lack(?:s|ing)?|unfamiliar|haven[’']t|don[’']t|doesn[’']t|learning|aspir(?:e|ing)|plan(?:ning)? to|want to)\b/i.test(clause));
+ const parts = text.split(/\n|[;!?]|\.(?:\s|$)|\bbut\b|\bhowever\b/i);
+ const negative = /\b(no|not|never|without|lack(?:s|ing)?|unfamiliar|haven[’']t|don[’']t|doesn[’']t|learning|aspir(?:e|ing)|plan(?:ning)? to|want to)\b/i;
+ const action = /\b(?:built|developed|created|managed|used|led|implemented|delivered|analysed|analyzed|designed|maintained|automated|proficient in|experienced in)\b/gi;
+ return parts.some(clause => {
+  const variants = aliases[term] ?? [term];
+  return variants.some(t => {
+   const matches = clause.matchAll(new RegExp('(?<![a-z0-9])' + escape(t) + 's?(?![a-z0-9])', 'gi'));
+   for (const match of matches) {
+    const index = match.index ?? 0;
+    const prefix = clause.slice(0, index);
+    const pivots = [...prefix.matchAll(action)];
+    const pivot = pivots.at(-1)?.index ?? 0;
+    const beforePivot = prefix.slice(0, pivot);
+    const local = clause.slice(pivot, index + match[0].length);
+    const suffix = clause.slice(index + match[0].length);
+    const negatedSuffix = /^\s+(?:(?:is|was|are|were|experience is)\s+)?(?:not|unfamiliar|is lacking|never)\b/i.test(suffix);
+    // “never used SQL” must retain the negation before the action.
+    const negatedAction = /\b(?:no|not|never|without|haven[’']t|don[’']t|doesn[’']t)\s+(?:\w+\s+){0,2}$/i.test(beforePivot);
+    if (!negative.test(local) && !negatedAction && !negatedSuffix) return true;
+   }
+   return false;
+  });
+ });
 }
 export const bulletPattern = /^\s*(?:[•*\-–▪◦]|\d+[.)])\s+/;
 function section(line: string): string | undefined {
@@ -76,7 +98,8 @@ export function analyse(cv: string, job: string) {
  }).filter((x): x is NonNullable<typeof x> => x !== null);
  const skills = catalog.filter(t => requirements.some(r => r.terms.includes(t)));
  const matched = skills.filter(t => supports(cv, t));
- const gaps = skills.filter(t => !supports(cv, t));
+ const priority = (t: string) => requirements.some(r => !r.preferred && r.terms.includes(t)) ? 0 : 1;
+ const gaps = skills.filter(t => !supports(cv, t)).sort((a, b) => priority(a) - priority(b));
  const suggestions = [
   { title: 'Product & growth analytics', sector: 'SaaS · Digital products', terms: ['SQL', 'activation', 'retention', 'experimentation', 'data analysis'] },
   { title: 'Customer insights', sector: 'Consumer services · Research', terms: ['customer research', 'customer support', 'communication'] },
@@ -114,21 +137,48 @@ export function tailor(cv: string, job: string) {
 export function rate(cv: string, job: string) {
  const a = analyse(cv, job);
  const bullets = cv.split('\n').filter(l => bulletPattern.test(l));
- const substantive = cv.trim().split(/\s+/).length >= 40 && bullets.some(l => l.trim().split(/\s+/).length >= 6);
- const impact = bullets.filter(l => /\d/.test(l) && /\b(increas|reduc|sav|improv|grew|growth|cut|boost|decreas|generat|deliver|achiev|retain|convert)\w*/i.test(l)).length;
+ const content = cv.split('\n').map(l => l.trim()).filter(Boolean);
+ const substantive = cv.trim().split(/\s+/).length >= 12 && cv.replace(/[^\p{L}]/gu, '').length >= 60 && content.some(l => l.split(/\s+/).length >= 6);
+ const units = bullets.length ? bullets : content.filter(l => l.split(/\s+/).length >= 6);
+ const impact = units.filter(l => /\d/.test(l) && /\b(increas|reduc|sav|improv|grew|growth|cut|boost|decreas|generat|deliver|achiev|retain|convert)\w*/i.test(l)).length;
  const weight = (t: string) => a.requirements.some(r => !r.preferred && r.terms.includes(t)) ? 2 : 1;
  const total = a.skills.reduce((n, t) => n + weight(t), 0);
  const quality = substantive ? 1 : 0;
- const clarity = Math.max(0, 100 - bullets.filter(l => l.split(/\s+/).length > 30).length * 10 - (cv.match(/responsible for|worked on|helped with/gi) || []).length * 8);
+ const clarity = Math.max(0, 100 - units.filter(l => l.split(/\s+/).length > 30).length * 10 - (cv.match(/responsible for|worked on|helped with/gi) || []).length * 8);
  const heading = (re: RegExp) => cv.split('\n').some(l => re.test(l.trim()));
  const structure = (heading(/^(?:work |professional )?experience:?$/i) ? 25 : 0)
   + (heading(/^(?:education|qualifications):?$/i) ? 20 : 0)
   + (heading(/^(?:(?:technical|core|key) )?skills(?: & strengths)?:?$/i) ? 20 : 0)
-  + (bullets.length ? 20 : 0) + (!/\t|│/.test(cv) ? 15 : 0);
+  + (units.length ? 20 : 0) + (!/\t|│/.test(cv) ? 15 : 0);
  return [
   { name: 'Relevance', score: quality && total ? Math.round(a.matched.reduce((n, t) => n + weight(t), 0) / total * 100) : 0, why: `${a.matched.length} of ${a.skills.length} recognised terms supported. Required or uncategorised terms count twice; preferred terms count once. Negated and aspirational claims are excluded conservatively.` },
-  { name: 'Evidence of impact', score: quality && bullets.length ? Math.round(impact / bullets.length * 100) : 0, why: `${impact} of ${bullets.length} bullets pair a number with an outcome verb. This text proxy needs manual review.` },
-  { name: 'Clarity', score: quality * clarity, why: 'Requires at least 40 words and a substantive bullet. Subtracts 10 per bullet over 30 words and 8 per vague opening.' },
-  { name: 'ATS readability', score: quality * structure, why: 'Checks standalone section headings, bullet structure and tabular separators. Requires substantive content. Does not inspect the uploaded layout or simulate an employer ATS.' },
+  { name: 'Evidence of impact', score: quality && units.length ? Math.round(impact / units.length * 100) : 0, why: `${impact} of ${units.length} experience statements pair a number with an outcome verb. This text proxy needs manual review.` },
+  { name: 'Clarity', score: quality * clarity, why: 'Requires meaningful text: at least 12 words, 60 letters and one statement of six words. Paragraphs and bullets are accepted. Subtracts 10 per statement over 30 words and 8 per vague opening.' },
+  { name: 'ATS readability', score: quality * structure, why: 'Checks standalone section headings, readable statements and tabular separators. Requires substantive content. Does not inspect the uploaded layout or simulate an employer ATS.' },
  ];
+}
+
+
+export function recommendProjects(cv: string, job: string) {
+ const { gaps, requirements } = analyse(cv, job);
+ const families = [
+  { id: 'pipeline', terms: ['dbt', 'data warehouse', 'SQL', 'PostgreSQL'], title: 'Build a reproducible analytics pipeline', brief: 'Use an open dataset. Model raw data into reporting tables, add data-quality tests, and document the pipeline.', deliverable: 'A repository with setup instructions, tested models and a dashboard answering one business question.' },
+  { id: 'experiment', terms: ['A/B testing', 'statistical significance', 'experimentation'], title: 'Design and evaluate a product experiment', brief: 'Use simulated or open experiment data. Define a hypothesis, primary metric and sample size. Report uncertainty and the decision you would make.', deliverable: 'An analysis notebook with reproducible results and a decision memo explaining limitations.' },
+  { id: 'saas', terms: ['SaaS', 'activation', 'retention'], title: 'Investigate a SaaS activation or retention problem', brief: 'Use a public or simulated product-event dataset. Define activation, build a cohort analysis and explain one potential improvement.', deliverable: 'A metric dictionary, cohort dashboard and short recommendation supported by the analysis.' },
+  { id: 'frontend', terms: ['React', 'JavaScript', 'TypeScript', 'accessibility'], title: 'Build an accessible task-focused web app', brief: 'Choose one practical workflow, implement it with the missing technologies and test keyboard access, mobile layout and error states.', deliverable: 'A deployed app, source repository and documented usability and accessibility checks.' },
+  { id: 'platform', terms: ['Docker', 'Kubernetes', 'AWS', 'Node.js', 'MongoDB'], title: 'Deploy a small service with operational checks', brief: 'Build a small API using public sample data. Add automated tests, health checks and repeatable deployment instructions.', deliverable: 'A repository with a working service, CI checks and a deployment runbook. Use local or free resources.' },
+  { id: 'research', terms: ['customer research', 'Figma', 'design'], title: 'Research and prototype a specific user problem', brief: 'Choose a volunteer brief. Record consent for interviews, synthesise findings and test a focused prototype with a few participants.', deliverable: 'An anonymised research summary, prototype and explanation of how feedback changed the design.' },
+ ];
+ const projects: { id: string; title: string; brief: string; deliverable: string; terms: string[]; requirements: string[] }[] = [];
+ for (const gap of gaps) {
+  const family = families.find(f => f.terms.includes(gap));
+  const id = family?.id ?? gap;
+  const existing = projects.find(p => p.id === id);
+  const related = requirements.filter(r => r.terms.includes(gap)).map(r => r.text);
+  if (existing) { existing.terms.push(gap); existing.requirements = [...new Set([...existing.requirements, ...related])]; continue; }
+  projects.push({ id, title: family?.title ?? `Demonstrate ${gap} in a small practical project`,
+   brief: family?.brief ?? `Choose a public dataset or volunteer brief where ${gap} solves a specific problem. Define the outcome, document your method and ask a practitioner to review the result.`,
+   deliverable: family?.deliverable ?? 'A finished artifact, reproducible instructions and a short account of results and limitations.', terms: [gap], requirements: related });
+ }
+ return projects;
 }
