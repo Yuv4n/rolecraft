@@ -21,18 +21,35 @@ None required. No AI provider keys are used. The demo uses deterministic matchin
 
 ```sh
 npx tsc --noEmit
-node --experimental-strip-types tests/engine.test.mjs
+npm test
 npm run build
 ```
 
-## Flow and architecture
+`npm test` runs three suites: the original engine rubric (`tests/engine.test.mjs`), the data model, versions and variants (`tests/model.test.mjs`), and review, grounding, role fit and plan (`tests/analysis.test.mjs`).
 
-- PDF.js extracts text-based PDFs in the browser; Mammoth extracts DOCX text. Maximum upload size is 8 MB, with a 20-page PDF limit. Users can correct or paste text.
-- /api/job reads public HTTPS HTML with a timeout, response size cap, redirect rejection and public-address checks. Pasting a description is the fallback.
-- lib/engine.ts contains the requirement vocabulary, niche suggestions, evidence matching, conservative bullet rewrites and transparent scoring rubric.
-- Source and tailored text appear side by side. Rewritten and moved lines are highlighted. The final editor updates both exports and scores.
-- DOCX and PDF are generated locally with docx and jsPDF. CV files and text never go to the server and are not persisted. Refreshing clears the workspace.
-- All extracted content is rendered as text. Nothing in an uploaded CV or job posting is executed or treated as an instruction. There is no content logging.
+## Four starting points
+
+After loading a CV the user chooses a goal. All four share one workspace, so accepted changes, saved roles and variants carry across them.
+
+- Tailor my CV to a specific role: saved roles, requirement-by-requirement evidence, missing-evidence questions and proposed edits.
+- Find roles that fit my CV: 12 role profiles split into ready, stretch and low overlap, with evidence quotes and specific gaps.
+- Plan experience to strengthen my CV: projects, responsibilities and work experience ranked by weighted demand across chosen roles. CV lines stay locked until every [bracket] is replaced with a real fact.
+- Review and improve my CV: 15 checks (relevance, action verbs, specificity, outcomes, ownership, repetition, credibility, grammar, tense, section order, bullet order, density, readability, formatting consistency, ATS), six scored groups with deductions shown, and section, line and check views.
+
+Every proposed edit shows a word-level before and after, can be previewed in the CV panel, and is accepted or rejected individually. Edits that need a fact ask for it and use only the user's answer.
+
+## Data model
+
+`lib/cv/types.ts` separates meaning from appearance and links them with stable node ids.
+
+- Content: a flat map of nodes (section, name, headline, contact, entry, bullet, paragraph, skills) with parent ids and text or parts. Content holds no order.
+- Layout: sibling order for every parent (section order, bullet order), role styles (font, size, bold, italic, colour, alignment, spacing, line height, indent, capitals, bullet glyph, separator), per-node overrides (page break, column break, hidden, style), and page setup (size, margins, columns, gap).
+- Snapshot: one content plus one layout. Editing text never replaces the layout object, and layout edits never replace content. `tests/model.test.mjs` asserts both.
+- Versions are immutable snapshots with a parent id. The import is stored once and never rewritten. A variant (for example one per role) has a head version, an uncommitted working copy and staged accept or reject decisions. Saving commits the working copy and accepted changes as one new version. Restoring and branching create new versions, so history is never lost.
+- `lib/cv/render.ts` resolves styles into render blocks. The live preview, PDF, DOCX and plain text all read the same blocks, so previews and exports agree. The exact PDF preview shows true pagination.
+- A workspace can be saved to and opened from a JSON file the user controls.
+
+Import limits: structure is parsed from extracted text, so fonts, columns and spacing in the uploaded file are not read. Imports start from a clean single-column layout that the Layout tab can change.
 
 ## Known limits
 
@@ -42,5 +59,5 @@ Job extraction reads static HTML. Login walls, redirects, JavaScript-only job bo
 
 Scanned PDFs need OCR outside this app. Complex layouts may extract out of order. Exports use a plain single-column layout. The PDF uses built-in Helvetica and supports Western text best; some Unicode characters may not render correctly. Review exports before sending. Downloads were exercised in the browser; DOCX text was re-extracted to check preservation.
 
-No database, accounts, history, LLM integration or persistent uploads are included. The hosted Site is owner-private by default.
+No database, accounts, LLM integration or server-side storage are included. Version history lives in the browser tab and in saved workspace files. The hosted Site is owner-private by default.
 

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
-import {sampleCV,sampleJob,analyse,tailor,rate,has} from '../lib/engine.ts';
-const a=analyse(sampleCV,sampleJob),t=tailor(sampleCV,sampleJob);
+import {sampleCV,sampleJob,analyse,rate,has} from '../lib/engine.ts';
+import {tailorText} from '../lib/analysis/tailor.ts';
+const a=analyse(sampleCV,sampleJob),t=tailorText(sampleCV,sampleJob);
 assert(a.gaps.includes('dbt'));
 assert(!a.matched.includes('dbt'));
 assert(a.requirements.some(r=>r.category==='Preferred experience'));
