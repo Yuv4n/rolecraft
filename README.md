@@ -1,36 +1,30 @@
 # Rolecraft
 
-A CV studio that runs entirely in the browser. Load a CV, then explore careers, tailor it to a role, find gaps, or get a scored review. Every suggestion points back to a line you wrote, and the tool asks you for facts instead of inventing them.
-
-Run it locally in a minute (see below) and click "Try a sample". There is no hosted demo.
+A CV studio that runs entirely in the browser. Load a CV, then explore careers, tailor it to a role, find gaps, or get an explainable score. There is no AI service, no account and no server-side storage, and every suggestion points back to a line you wrote.
 
 ![Review workflow: a scored CV review with six weighted groups](docs/review.png)
 
-## What it does
+## Features
 
-After loading a CV (PDF, DOCX or pasted text) you pick a starting point. All five share one workspace, so accepted edits and saved roles carry across them.
+- **Explore careers:** career paths, industries and specific roles ranked by fit, each justified with quoted CV lines.
+- **Tailor to a role:** paste a job description for requirement-by-requirement evidence and proposed edits. Edits show a word-level before and after, and missing facts become questions rather than invented claims.
+- **Find roles and plan experience:** roles grouped as ready, stretch or low overlap with the specific gaps, and projects ranked by how much demand they cover.
+- **Review:** 15 checks feed six weighted score groups, and every deduction is shown.
+- **Export:** PDF, DOCX and text come from the same render model as the live preview. Versions are immutable snapshots, so you can branch a variant per role.
 
-- Explore careers and find jobs. Career paths ranked by fit, then industries and specific roles, each with reasoning tied to quoted CV lines.
-- Tailor to a specific role. Paste a job description and get requirement-by-requirement evidence, questions where evidence is missing, and proposed edits shown as a word-level before and after that you accept or reject one by one.
-- Find roles that fit. Role profiles split into ready, stretch and low overlap, with the specific gaps.
-- Plan experience. Projects and responsibilities ranked by how much demand they would cover across your chosen roles.
-- Review and improve. Fifteen checks (relevance, action verbs, specificity, outcomes, tense, ATS readability and others) feed six weighted score groups. Every deduction is shown.
+## Engineering notes
 
-Exports (PDF, DOCX, plain text) are generated in the browser from the same render model as the live preview, so what you see is what you download. Versions are immutable snapshots, so you can branch per role and restore any earlier state.
+- **Deterministic and explainable:** matching uses a fixed vocabulary and negation-aware term matching, so results are repeatable. "Learning SQL" does not count as SQL experience. Scores are revision guidance, not hiring predictions.
+- **Private by design:** parsing, scoring and export all run in the browser. Nothing is logged or stored unless you save a workspace file.
+- **Content and layout are separate:** the CV is a flat map of nodes with stable ids, and layout holds order and styles. Editing one never rewrites the other (`lib/cv/types.ts`, tested in `tests/model.test.mjs`).
+- **Untrusted input:** DOCX extraction is bounded (2 MB expanded, no DTDs, 30,000 characters), PDFs are capped at 20 pages, and uploaded text is only ever rendered as text. See [SECURITY.md](SECURITY.md).
+- **CI:** typecheck, eight test suites, lint, formatting, dependency audit and a production build run on every push.
 
 ![Career paths with evidence quoted from the CV](docs/careers.png)
 
-## Design choices
-
-- No AI service. Matching is deterministic: a fixed vocabulary, negation-aware term matching and conservative text rewrites. This makes results repeatable and explainable, and it means the hosted demo cannot incur API costs. The limits are real and documented: it recognises a bounded set of roles and skills and does not understand text semantically.
-- Nothing leaves the browser. There are no accounts, no database and no logging of CV contents. Refreshing clears the workspace unless you save a workspace file yourself.
-- Content and layout are separate. The CV is a flat map of nodes with stable ids; layout holds ordering, styles and page setup. Editing text never rewrites layout and the reverse (`lib/cv/types.ts`, asserted in `tests/model.test.mjs`).
-- Honest scores. Scores are revision guidance, not predictions of hiring success or of any employer's ATS. Claims that are negated or aspirational ("learning SQL") do not count as evidence. Requirements the tool cannot assess, such as degrees or licences, are flagged for you instead of scored.
-- Untrusted input. DOCX extraction is bounded (2 MB of expanded XML, no DTDs or entities, 30,000 characters) and PDFs are limited to 20 pages. Uploaded text is always rendered as text. See [SECURITY.md](SECURITY.md).
-
 ## Stack
 
-React 19, TypeScript, Next.js app router running on Vite via vinext, deployed to Cloudflare Workers. PDF.js for reading PDFs, jsPDF and docx for exports. Eight test suites run as plain Node scripts using `assert`, with no test framework. GitHub Actions runs typecheck, tests, lint, formatting, a dependency audit and the production build on every push and pull request.
+React 19, TypeScript, Next.js app router on Vite (vinext), Cloudflare Workers config, PDF.js, jsPDF and docx.
 
 ## Run locally
 
@@ -38,36 +32,20 @@ Node.js 24 or later.
 
 ```sh
 npm ci
-npm run dev
-```
-
-Open http://localhost:5173 and click "Try a sample".
-
-```sh
+npm run dev       # http://localhost:5173, then click "Try a sample"
 npm run check     # typecheck, tests, lint, formatting
-npm run build     # production build
-npm run benchmark # timing on near-limit CV and job text
 ```
 
-No environment variables are needed.
-
-## Hosting and cost
-
-There is no hosted demo, and the project is set up so that running one would cost nothing. The Worker config has no bindings, secrets or variables and Workers Logs is switched off in `vite.config.ts`. The app makes no outbound requests: the live job-feed route (`/api/jobs`) answers 410 unless `JOB_FEEDS_ENABLED=true` is set, and the URL-fetch route (`/api/job`) is permanently disabled. To host it yourself, log in with `npx wrangler login`, then run `npm run build && npm run deploy:cloudflare`. The optional workflow `.github/workflows/deploy.yml` stays inactive unless a token and `CLOUDFLARE_DEPLOY_ENABLED` are set in the repository.
+No environment variables are needed, and there is no hosted demo. The Worker config has no bindings, secrets or logging, and the app makes no outbound requests, so deploying it would cost nothing to run.
 
 ## Known limits
 
-- Scanned PDFs need OCR elsewhere, and complex layouts can extract out of order. Imports start from a clean single-column layout.
-- The vocabulary covers product, analytics, operations, design and common software roles. Niche recommendations are exploratory.
-- Live job postings were written against each provider's documented JSON feed and tested with fixtures, not against the live services, and are off in the demo. Sample postings show the feature.
-- The interface aims for AA contrast, visible focus and 44px targets, but it has not been audited with assistive technology.
+Scanned PDFs need OCR elsewhere. The vocabulary covers product, analytics, operations, design and common software roles, so niche suggestions are exploratory. Live job feeds are written against documented provider formats but are untested live and switched off. Details are in [docs/design-notes.md](docs/design-notes.md).
 
-More detail is in [docs/design-notes.md](docs/design-notes.md).
+## Hackathon
 
-## How it was built
-
-Rolecraft started as a hackathon project and was built with substantial help from Claude (Anthropic's coding assistant), with the product constraints written down in `CLAUDE.md`. An earlier variant with live multi-agent analysis is kept at the tag `archive/hackathon-live-analysis`. It is left out of `main` because it needs paid API access. The hackathon pitch video and slides, which show that variant, are in [docs/hackathon](docs/hackathon/).
+Rolecraft began as a hackathon project. The [pitch video and slides](docs/hackathon/) show an earlier variant with live AI analysis, which is archived at the tag `archive/hackathon-live-analysis` and not part of `main`.
 
 ## Licence
 
-MIT, see [LICENSE](LICENSE). The bundled Noto Sans font is under the SIL Open Font License (`public/fonts/OFL.txt`).
+MIT, see [LICENSE](LICENSE). The bundled Noto Sans font is under the SIL Open Font License.

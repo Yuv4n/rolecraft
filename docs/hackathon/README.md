@@ -8,7 +8,7 @@ The 3-minute pitch video and slides from the hackathon.
 
 ## What differs from this repository
 
-The video and deck present the hackathon version of Rolecraft, a focus-plan tool with an optional live mode in which five agents call the Anthropic API. That version is archived at the git tag `archive/hackathon-live-analysis` and is not in `main`, because it needs paid API access. In this repository:
+The video and deck present the hackathon version of Rolecraft, a focus-plan tool with an optional live mode that used a hosted AI service. That version is archived at the git tag `archive/hackathon-live-analysis` and is not in `main`, because it needs paid API access. In this repository:
 
 - The five-agent live mode, the outreach email and the "focus plan" flow shown in the video do not exist.
 - The video's offline engine, evidence-quoting and "claims must trace to your own words" principles do carry over. The interface has since been redesigned around five workflows.
