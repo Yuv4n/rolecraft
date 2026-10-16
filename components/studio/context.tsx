@@ -3,7 +3,7 @@ import { createContext, useContext } from 'react';
 import type { Change, Decision, SavedRole, Snapshot, Variant, Workspace } from '../../lib/cv/types';
 import type { Action, Effective } from '../../lib/cv/workspace';
 
-export type Workflow = 'home' | 'tailor' | 'roles' | 'plan' | 'review';
+export type Workflow = 'home' | 'careers' | 'tailor' | 'roles' | 'plan' | 'review';
 
 export interface StudioApi {
   ws: Workspace;

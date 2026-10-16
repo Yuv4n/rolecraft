@@ -25,18 +25,32 @@ npm test
 npm run build
 ```
 
-`npm test` runs three suites: the original engine rubric (`tests/engine.test.mjs`), the data model, versions and variants (`tests/model.test.mjs`), and review, grounding, role fit and plan (`tests/analysis.test.mjs`).
+`npm test` runs four suites (the fourth is `tests/jobs.test.mjs`: feeds, safety rules, ranking and career paths): the original engine rubric (`tests/engine.test.mjs`), the data model, versions and variants (`tests/model.test.mjs`), and review, grounding, role fit and plan (`tests/analysis.test.mjs`).
 
-## Four starting points
+## Five starting points
 
-After loading a CV the user chooses a goal. All four share one workspace, so accepted changes, saved roles and variants carry across them.
+After loading a CV the user chooses a goal. All five share one workspace, so accepted changes, saved roles and variants carry across them.
 
+- Explore careers and find jobs: career paths ranked by fit, each with reasoning tied to CV lines, then industries and specific roles inside them (for example Product Analyst in SaaS, Financial Analyst in fintech), then live postings from open job feeds ranked against the CV. Roles the user ticks become search keywords. Each posting shows why it fits, what is missing, and seniority or years-of-experience mismatches, and can be sent straight to the Tailor workflow.
 - Tailor my CV to a specific role: saved roles, requirement-by-requirement evidence, missing-evidence questions and proposed edits.
 - Find roles that fit my CV: 12 role profiles split into ready, stretch and low overlap, with evidence quotes and specific gaps.
 - Plan experience to strengthen my CV: projects, responsibilities and work experience ranked by weighted demand across chosen roles. CV lines stay locked until every [bracket] is replaced with a real fact.
 - Review and improve my CV: 15 checks (relevance, action verbs, specificity, outcomes, ownership, repetition, credibility, grammar, tense, section order, bullet order, density, readability, formatting consistency, ATS), six scored groups with deductions shown, and section, line and check views.
 
 Every proposed edit shows a word-level before and after, can be previewed in the CV panel, and is accepted or rejected individually. Edits that need a fact ask for it and use only the user's answer.
+
+## Job postings
+
+`/api/jobs` reads open job feeds and never accepts CV text or arbitrary URLs.
+
+- Sources: Remotive and Arbeitnow, plus optional company boards on Greenhouse and Lever that the user names. These are documented public JSON feeds. Rolecraft does not scrape job-board HTML, which most boards forbid and block. Each posting shows its source, links to the original, and is not stored.
+- Request: only role keywords (6 at most, 60 characters each), a place, a remote flag and board names that match `^[a-z0-9][a-z0-9_-]{0,49}$`. Every outbound URL is built from a fixed host allowlist (`lib/jobs/providers.ts`). Redirects are not followed, responses are capped at 4 MB, calls time out at 8 seconds and results are cached for 10 minutes.
+- Errors: each source reports found, or unavailable with a short fixed reason. Raw error text is never shown.
+- Ranking: runs in the browser (`lib/analysis/jobmatch.ts`). The CV is never sent. Job text is rendered as plain text.
+- Rate limit: 20 searches per client per 10 minutes, held in memory. Each worker instance counts separately, so add a Cloudflare rate-limiting rule before public hosting.
+- Sample postings (fictional, no links) let the feature be demonstrated offline.
+- The feed formats were written from each provider's documentation and tested against fixtures. They were not exercised live from the development sandbox, which has no outbound network access, so check each source once on the deployed site.
+- Coverage: the open feeds lean towards remote and technology roles. Other boards would need their own licensed API.
 
 ## Data model
 
