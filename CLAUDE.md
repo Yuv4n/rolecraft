@@ -15,18 +15,19 @@ Read README.md for setup, architecture, privacy constraints and known limitation
 - `npm ci`
 - `npm run dev` (use the printed URL, usually port 5173)
 - `npx tsc --noEmit`
-- `node --experimental-strip-types tests/engine.test.mjs`
+- `npm test`
 - `npm run build`
 
 No API keys or environment variables are required for the current demo.
 
 ## Important files
 
-- `app/page.tsx`: client flow, extraction, review and exports.
-- `app/globals.css`: responsive interface.
-- `app/api/job/route.ts`: public job URL extraction.
-- `lib/engine.ts`: matching, niche suggestions, conservative tailoring and scoring.
-- `tests/engine.test.mjs`: grounding and rubric checks.
+- `components/studio/Studio.tsx`: shell, intake, goal chooser and shared state. One view file per workflow beside it, plus `DocPanel.tsx` (preview, content, layout, history).
+- `lib/cv/`: data model (`types.ts`), parser, renderer, edit operations, workspace reducer, exports. Content and layout stay separate; keep it so.
+- `lib/analysis/`: `review.ts`, `tailor.ts`, `roles.ts`, `plan.ts`, `playbook.ts`.
+- `lib/engine.ts`: vocabulary and term matching.
+- `app/globals.css`: responsive interface. `app/api/job/route.ts`: public job URL extraction.
+- `tests/`: engine, model and analysis suites. Library files must stay erasable TypeScript with `.ts` import extensions so Node can run them.
 
 ## Product constraints
 
