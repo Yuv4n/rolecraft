@@ -1,4 +1,9 @@
+import { parseWorkspace } from "./cv/workspace.ts";
+import type { Workspace } from "./cv/types.ts";
 export const DRAFT_KEY = "rolecraft-draft";
+export const WORKSPACE_DRAFT_KEY = "rolecraft-workspace-draft";
+// localStorage holds about 5 MB per origin. Refuse anything near that.
+export const MAX_WORKSPACE_DRAFT = 2_000_000;
 export type Draft = {
   version: 1;
   cv: string;
@@ -25,6 +30,15 @@ export function readDraft(raw: string | null): Draft | null {
     )
       return null;
     return value as Draft;
+  } catch {
+    return null;
+  }
+}
+
+export function readWorkspaceDraft(raw: string | null): Workspace | null {
+  if (!raw || raw.length > MAX_WORKSPACE_DRAFT) return null;
+  try {
+    return parseWorkspace(raw);
   } catch {
     return null;
   }

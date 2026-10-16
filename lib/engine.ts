@@ -67,8 +67,37 @@ const aliases: Record<string, string[]> = {
   "product management": ["product management"],
   accessibility: ["accessibility", "WCAG"],
   testing: ["unit testing", "integration testing", "automated testing"],
+  Looker: ["Looker"],
+  "Google Analytics": ["Google Analytics"],
+  HTML: ["HTML"],
+  CSS: ["CSS"],
+  prototyping: ["prototyping", "prototype"],
+  roadmap: ["roadmap"],
+  budgeting: ["budgeting"],
+  reporting: ["reporting"],
+  forecasting: ["forecasting"],
+  SEO: ["SEO"],
+  CRM: ["CRM"],
+  Agile: ["Agile"],
+  "financial modelling": ["financial modelling", "financial modeling"],
+  "customer success": ["customer success"],
+  onboarding: ["onboarding"],
+  "process improvement": ["process improvement"],
+  "vendor management": ["vendor management"],
+  negotiation: ["negotiation"],
+  healthcare: ["healthcare"],
+  clinical: ["clinical"],
+  "public sector": ["public sector"],
+  "supply chain": ["supply chain"],
+  logistics: ["logistics"],
+  "e-commerce": ["e-commerce", "ecommerce"],
+  fintech: ["fintech"],
+  payments: ["payments"],
+  compliance: ["compliance"],
+  consulting: ["consulting"],
+  retail: ["retail"],
 };
-const catalog = Object.keys(aliases);
+export const catalog = Object.keys(aliases);
 const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 // Compile once. Matching never retains uploaded text in a module-level cache.
 const patterns = new Map(

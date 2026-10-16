@@ -22,13 +22,16 @@ No API keys or environment variables are required for the current demo.
 
 ## Important files
 
-- `app/page.tsx`: client flow, extraction, review and exports.
-- `app/globals.css`: responsive interface.
+- `components/studio/Studio.tsx`: shell, intake, goal chooser and shared state. One view file per workflow beside it, plus `DocPanel.tsx` (preview, content, layout, history).
+- `components/studio/extract.ts`: browser PDF, DOCX and text extraction. `lib/docx-import.ts` is the bounded DOCX reader.
+- `lib/cv/`: data model (`types.ts`), parser, renderer, edit operations, workspace reducer, exports. Content and layout stay separate; keep it so.
+- `lib/analysis/`: `review.ts`, `tailor.ts`, `roles.ts`, `plan.ts`, `playbook.ts`, `careers.ts` (paths, industries, roles), `jobmatch.ts` (ranks postings against the CV in the browser).
+- `lib/jobs/` and `app/api/jobs/route.ts`: open job feed parsers, fixed host allowlist, limiter and sample postings. The route must never accept CV content or caller-supplied URLs.
 - `app/api/job/route.ts`: rejects URL extraction in the public demo.
-- `lib/engine.ts`: matching, niche suggestions, conservative tailoring and scoring.
-- `tests/engine.test.mjs`: grounding and rubric checks.
-- `lib/docx-import.ts`: bounded browser DOCX extraction.
-- `lib/draft.ts`: device draft validation.
+- `lib/engine.ts`: vocabulary, term matching, requirement parsing, niche suggestions and the original scoring rubric.
+- `lib/draft.ts`: device draft validation. `lib/pdf-font.ts`: PDF glyph check.
+- `app/globals.css`: responsive interface.
+- `tests/`: engine, public demo, draft, DOCX, model, analysis and jobs suites. Library files must stay erasable TypeScript with `.ts` import extensions so Node can run them.
 
 ## Product constraints
 

@@ -16,7 +16,7 @@
     "deploy:cloudflare": "node scripts/cloudflare.mjs deploy",
     "check": "npm run typecheck && npm run test && npm run lint && npm run format:check",
     "typecheck": "tsc --noEmit",
-    "test": "node tests/engine.test.mjs && node tests/public-demo.test.mjs && node tests/draft.test.mjs && node tests/docx-import.test.mjs",
+    "test": "node tests/engine.test.mjs && node tests/public-demo.test.mjs && node tests/draft.test.mjs && node tests/docx-import.test.mjs && node tests/model.test.mjs && node tests/analysis.test.mjs && node tests/jobs.test.mjs",
     "format": "prettier --write app/page.tsx app/globals.css lib/engine.ts lib/draft.ts lib/pdf-font.ts lib/docx-import.ts tests/*.mjs",
     "format:check": "prettier --check app/page.tsx app/globals.css lib/engine.ts lib/draft.ts lib/pdf-font.ts lib/docx-import.ts tests/*.mjs",
     "benchmark": "node tests/benchmark.mjs",

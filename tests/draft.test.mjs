@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
-import { readDraft } from "../lib/draft.ts";
+import { readDraft, readWorkspaceDraft } from "../lib/draft.ts";
+import { createWorkspace } from "../lib/cv/workspace.ts";
+import { sampleCV } from "../lib/engine.ts";
 const draft = {
   version: 1,
   cv: "CV text",
@@ -23,4 +25,16 @@ for (const raw of [
   "a".repeat(100001),
 ])
   assert.equal(readDraft(raw), null);
+const workspace = createWorkspace(sampleCV, "sample.txt", 1);
+assert.deepEqual(readWorkspaceDraft(JSON.stringify(workspace)), workspace);
+for (const raw of [
+  null,
+  "",
+  "bad JSON",
+  "null",
+  "{}",
+  JSON.stringify({ ...workspace, schema: 2 }),
+  "a".repeat(2_000_001),
+])
+  assert.equal(readWorkspaceDraft(raw), null);
 console.log("PASS: draft schema, versions, corruption and size limits");

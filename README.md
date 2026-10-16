@@ -13,7 +13,7 @@ npm ci
 npm run dev
 ```
 
-Open the Local URL printed by Vite, usually http://127.0.0.1:5173. Click Try a sample to populate the CV and job description, then continue through the four steps. The sample also works without any external job website.
+Open the Local URL printed by Vite, usually http://127.0.0.1:5173. Click Try a sample to load a CV and a saved role, then pick a starting point. The sample also works without any external job website.
 
 ## Environment variables
 
@@ -27,14 +27,52 @@ npm run build:cloudflare
 npm run benchmark
 ```
 
-## Flow and architecture
+`npm test` runs seven suites: the engine rubric (`tests/engine.test.mjs`), the public demo route, device drafts, DOCX import, the data model with versions and variants (`tests/model.test.mjs`), review, grounding, role fit and plan (`tests/analysis.test.mjs`), and job feeds, safety rules, ranking and career paths (`tests/jobs.test.mjs`).
 
-- PDF.js extracts text-based PDFs in the browser; Bounded ZIP/XML extraction reads DOCX paragraphs, including Word list markers, headers and footers. Maximum upload size is 8 MB, with a 20-page PDF limit. Users can correct or paste text.
-- The public demo accepts pasted job descriptions. `/api/job` returns HTTP 410 without making outbound requests.
-- lib/engine.ts contains the requirement vocabulary, niche suggestions, evidence matching, conservative bullet rewrites and transparent scoring rubric.
-- Source and tailored text appear side by side. Rewritten and moved lines are highlighted. The final editor updates both exports and scores.
-- DOCX and PDF are generated locally with docx and jsPDF. CV files and text never go to the server. By default, refreshing clears the workspace. Users can opt in to a local draft, stored only in this browser, and remove it from the interface.
+## Loading a CV
+
+- PDF.js extracts text-based PDFs in the browser. Bounded ZIP and XML extraction reads DOCX paragraphs, including Word list markers, headers and footers. Plain text files are also accepted. Maximum upload size is 8 MB, with a 20-page PDF limit. Users can correct or paste text.
+- The public demo accepts pasted job descriptions. `/api/job` returns HTTP 410 without making outbound requests. Live postings come from `/api/jobs`, described below.
+- DOCX and PDF are generated locally with docx and jsPDF. CV files and text never go to the server. By default, refreshing clears the workspace. Users can opt in to a device draft, stored only in this browser, and remove it from the interface.
 - All extracted content is rendered as text. Nothing in an uploaded CV or job posting is executed or treated as an instruction. There is no content logging.
+
+## Five starting points
+
+After loading a CV the user chooses a goal. All five share one workspace, so accepted changes, saved roles and variants carry across them.
+
+- Explore careers and find jobs: career paths ranked by fit, each with reasoning tied to CV lines, then industries and specific roles inside them (for example Product Analyst in SaaS, Financial Analyst in fintech), then live postings from open job feeds ranked against the CV. Roles the user ticks become search keywords. Each posting shows why it fits, what is missing, and seniority or years-of-experience mismatches, and can be sent straight to the Tailor workflow.
+- Tailor my CV to a specific role: saved roles, requirement-by-requirement evidence, missing-evidence questions and proposed edits.
+- Find roles that fit my CV: 12 role profiles split into ready, stretch and low overlap, with evidence quotes and specific gaps.
+- Plan experience to strengthen my CV: projects, responsibilities and work experience ranked by weighted demand across chosen roles. CV lines stay locked until every [bracket] is replaced with a real fact.
+- Review and improve my CV: 15 checks (relevance, action verbs, specificity, outcomes, ownership, repetition, credibility, grammar, tense, section order, bullet order, density, readability, formatting consistency, ATS), six scored groups with deductions shown, and section, line and check views.
+
+Every proposed edit shows a word-level before and after, can be previewed in the CV panel, and is accepted or rejected individually. Edits that need a fact ask for it and use only the user's answer.
+
+## Job postings
+
+`/api/jobs` reads open job feeds and never accepts CV text or arbitrary URLs.
+
+- Sources: Remotive and Arbeitnow, plus optional company boards on Greenhouse and Lever that the user names. These are documented public JSON feeds. Rolecraft does not scrape job-board HTML, which most boards forbid and block. Each posting shows its source, links to the original, and is not stored.
+- Request: only role keywords (6 at most, 60 characters each), a place, a remote flag and board names that match `^[a-z0-9][a-z0-9_-]{0,49}$`. Every outbound URL is built from a fixed host allowlist (`lib/jobs/providers.ts`). Redirects are not followed, responses are capped at 4 MB, calls time out at 8 seconds and results are cached for 10 minutes.
+- Errors: each source reports found, or unavailable with a short fixed reason. Raw error text is never shown.
+- Ranking: runs in the browser (`lib/analysis/jobmatch.ts`). The CV is never sent. Job text is rendered as plain text.
+- Rate limit: 20 searches per client per 10 minutes, held in memory. Each worker instance counts separately, so add a Cloudflare rate-limiting rule before public hosting.
+- Sample postings (fictional, no links) let the feature be demonstrated offline.
+- The feed formats were written from each provider's documentation and tested against fixtures. They were not exercised live from the development sandbox, which has no outbound network access, so check each source once on the deployed site.
+- Coverage: the open feeds lean towards remote and technology roles. Other boards would need their own licensed API.
+
+## Data model
+
+`lib/cv/types.ts` separates meaning from appearance and links them with stable node ids.
+
+- Content: a flat map of nodes (section, name, headline, contact, entry, bullet, paragraph, skills) with parent ids and text or parts. Content holds no order.
+- Layout: sibling order for every parent (section order, bullet order), role styles (font, size, bold, italic, colour, alignment, spacing, line height, indent, capitals, bullet glyph, separator), per-node overrides (page break, column break, hidden, style), and page setup (size, margins, columns, gap).
+- Snapshot: one content plus one layout. Editing text never replaces the layout object, and layout edits never replace content. `tests/model.test.mjs` asserts both.
+- Versions are immutable snapshots with a parent id. The import is stored once and never rewritten. A variant (for example one per role) has a head version, an uncommitted working copy and staged accept or reject decisions. Saving commits the working copy and accepted changes as one new version. Restoring and branching create new versions, so history is never lost.
+- `lib/cv/render.ts` resolves styles into render blocks. The live preview, PDF, DOCX and plain text all read the same blocks, so previews and exports agree. The exact PDF preview shows true pagination.
+- A workspace can be saved to and opened from a JSON file the user controls.
+
+Import limits: structure is parsed from extracted text, so fonts, columns and spacing in the uploaded file are not read. Imports start from a clean single-column layout that the Layout tab can change.
 
 ## Known limits
 
@@ -44,7 +82,7 @@ Job URL fetching is disabled for the public demo. Add production egress controls
 
 Scanned PDFs need OCR outside this app. Complex layouts may extract out of order. Exports use a plain single-column layout. PDF exports embed the openly licensed Noto Sans font. The exporter checks character coverage and directs users to DOCX if the text includes unsupported characters. Review exports before sending. Downloads were exercised in the browser; DOCX text was re-extracted to check preservation.
 
-No server database, accounts, LLM integration or persistent uploads are included. The standalone Cloudflare app is public. The separate Sites deployment remains owner-private by default.
+No server database, accounts, LLM integration or server-side storage are included. Version history lives in the browser tab, in saved workspace files and in the optional device draft. The standalone Cloudflare app is public. The separate Sites deployment remains owner-private by default.
 
 ## Working across Claude sessions
 
