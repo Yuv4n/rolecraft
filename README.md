@@ -66,7 +66,7 @@ More detail is in [docs/design-notes.md](docs/design-notes.md).
 
 ## How it was built
 
-Rolecraft started as a hackathon project and was built with substantial help from Claude (Anthropic's coding assistant), with the product constraints written down in `CLAUDE.md`. An earlier variant with live multi-agent analysis is kept at the tag `archive/hackathon-live-analysis`. It is left out of `main` because it needs paid API access.
+Rolecraft started as a hackathon project and was built with substantial help from Claude (Anthropic's coding assistant), with the product constraints written down in `CLAUDE.md`. An earlier variant with live multi-agent analysis is kept at the tag `archive/hackathon-live-analysis`. It is left out of `main` because it needs paid API access. The hackathon pitch video and slides, which show that variant, are in [docs/hackathon](docs/hackathon/).
 
 ## Licence
 

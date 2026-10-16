@@ -11,6 +11,7 @@ const eslintConfig = defineConfig([
     ".next/**",
     "out/**",
     "dist/**",
+    "docs/**",
     ".wrangler/**",
     "public/**",
     "work/**",

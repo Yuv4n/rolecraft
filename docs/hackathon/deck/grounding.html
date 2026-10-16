@@ -1,0 +1,37 @@
+<section id="grounding" data-transition="fade" style="background:#edf0e8;color:#213f39;font-family:'DM Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:24px">
+<h2 style="font-family:'Manrope', Arial, sans-serif;font-size:60px;font-weight:800;line-height:1.1;letter-spacing:-1px;color:#213f39">Agents propose. Code verifies.</h2>
+<p style="font-size:26px;line-height:1.4;color:#3c4a45">Real output of the grounding check. The original CV line is “Led a team of designers on checkout”.</p>
+<table style="font-family:'DM Sans', Arial, sans-serif;font-size:24px;color:#213f39;width:1664px">
+<tr><th style="width:15%;font-weight:700">Result</th><th style="width:45%;font-weight:700">Rewrite proposed</th><th style="width:40%;font-weight:700">What the check found</th></tr>
+<tr><td style="width:15%;font-weight:700;color:#8a3a1a">REJECTED</td><td style="width:45%">Led a team of five designers on checkout</td><td style="width:40%">adds numbers not in the original line: 5</td></tr>
+<tr><td style="width:15%;font-weight:700;color:#8a3a1a">REJECTED</td><td style="width:45%">Led a team of designers on checkout and doubled conversion</td><td style="width:40%">adds numbers not in the original line: doubled</td></tr>
+<tr><td style="width:15%;font-weight:700;color:#8a3a1a">REJECTED</td><td style="width:45%">Led ex-Google designers on checkout</td><td style="width:40%">introduces words that are not in the original line: ex-google</td></tr>
+<tr><td style="width:15%;font-weight:700;color:#8a3a1a">REJECTED</td><td style="width:45%">Led a team of designers on checkout using kubernetes and python</td><td style="width:40%">introduces words that are not in the original line: using, kubernetes, python</td></tr>
+<tr><td style="width:15%;font-weight:700;color:#1d5a3a">ACCEPTED</td><td style="width:45%">Led designers on checkout</td><td style="width:40%">no problem found</td></tr>
+</table>
+<div style="display:flex;gap:24px;align-items:stretch">
+<div style="flex:1;display:flex;flex-direction:column;gap:8px;background:#fdfdfb;border:1px solid #d7ddd2;border-radius:16px;padding:24px 28px">
+<h3 style="font-family:'Manrope', Arial, sans-serif;font-size:28px;font-weight:700;line-height:1.2;color:#213f39">One retry, with the reasons</h3>
+<p style="font-size:24px;line-height:1.4;color:#3c4a45">If nothing verifiable is left, the step fails instead of guessing.</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:8px;background:#fdfdfb;border:1px solid #d7ddd2;border-radius:16px;padding:24px 28px">
+<h3 style="font-family:'Manrope', Arial, sans-serif;font-size:28px;font-weight:700;line-height:1.2;color:#213f39">A trace of every run</h3>
+<p style="font-size:24px;line-height:1.4;color:#3c4a45">Each agent, its model, and what it kept or removed.</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:8px;background:#fdfdfb;border:1px solid #d7ddd2;border-radius:16px;padding:24px 28px">
+<h3 style="font-family:'Manrope', Arial, sans-serif;font-size:28px;font-weight:700;line-height:1.2;color:#213f39">The same rules offline</h3>
+<p style="font-size:24px;line-height:1.4;color:#3c4a45">Offline rewrites pass this same check.</p>
+</div>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;width:900px;font-size:24px;color:#56635d">Rolecraft · Grounding</p>
+<p style="position:absolute;right:128px;bottom:64px;width:300px;font-size:24px;color:#56635d;text-align:right">11 / 13</p>
+<aside>2:30 to 2:48. About 18 seconds.
+
+SAY: "This is how the agents stay honest. A model can propose a rewrite, but code decides whether it is allowed. Here the original line is ‘Led a team of designers on checkout’. Adding ‘five’ is rejected. Adding ‘doubled conversion’ is rejected. A made-up employer is rejected. Extra tools are rejected. Simply tightening the line is accepted. Every quote an agent returns must appear in the CV, or it is removed."
+
+THE ROWS ARE REAL: they are the actual output of the grounding check function run on those five candidate rewrites, not mock-ups. The check rejects any new number, including number words and non-ASCII digits, and any content word that is not in the original line apart from a short list of replacement verbs. It also requires a rewrite to be a single line that replaces one whole CV line.
+
+WHAT ELSE IS CHECKED: quotes must appear verbatim inside one bullet, so they cannot span two. Summaries and explanations are checked for invented numbers, names and links. Email sentences must each be listed as a claim that restates its quote. All angle brackets in untrusted text are neutralised so a CV cannot close a data tag or inject instructions. These checks were hardened after an independent review found ways around an earlier, weaker version.
+
+HONEST LIMIT: the check proves a quote exists in the user’s text. A quote can be a fragment of a longer sentence, and the check does not prove the model drew the right conclusion from it.</aside>
+</section>
