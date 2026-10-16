@@ -9,7 +9,7 @@ import {chmodSync, existsSync, writeFileSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 
 const target = fileURLToPath(new URL('../.dev.vars', import.meta.url));
-const names = ['ANTHROPIC_API_KEY', 'ANTHROPIC_MODEL', ...Object.keys(process.env).filter((k) => k.startsWith('FOCUS_MODEL_'))];
+const names = ['ANTHROPIC_API_KEY', 'ANTHROPIC_WORKSPACE_ID', 'ANTHROPIC_MODEL', ...Object.keys(process.env).filter((k) => k.startsWith('FOCUS_MODEL_'))];
 const present = names.filter((n) => process.env[n]);
 
 if (!process.env.ANTHROPIC_API_KEY) {

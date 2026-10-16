@@ -7,8 +7,16 @@ export class ModelRefusal extends Error {}
 export class ModelTruncated extends Error {}
 export class ModelBadOutput extends Error {}
 
-export function makeAnthropicCall(apiKey: string): AgentCall {
-  const client = new Anthropic({apiKey, maxRetries: 1, timeout: 150_000});
+/**
+ * A user-level key is not tied to a workspace, so the API needs the workspace ID in a header. Workspace-scoped keys
+ * do not need it. The ID is not a secret, and anything that is not a plain identifier is ignored.
+ */
+export function workspaceHeaders(workspaceId?: string): Record<string, string> | undefined {
+  return workspaceId && /^[\w-]{4,80}$/.test(workspaceId) ? {'anthropic-workspace-id': workspaceId} : undefined;
+}
+
+export function makeAnthropicCall(apiKey: string, workspaceId?: string): AgentCall {
+  const client = new Anthropic({apiKey, maxRetries: 1, timeout: 150_000, defaultHeaders: workspaceHeaders(workspaceId)});
   return async (req) => {
     const response = await client.beta.messages.create({
       model: req.model,

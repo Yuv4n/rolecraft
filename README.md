@@ -20,6 +20,7 @@ Open the Local URL printed by Vite, usually http://127.0.0.1:5173. Click Try a s
 All optional. With none set, the app runs entirely in the browser using the offline engine.
 
 - ANTHROPIC_API_KEY enables live analysis through the Anthropic API. It is read only on the server and must never be given a NEXT_PUBLIC_ or VITE_ prefix.
+- ANTHROPIC_WORKSPACE_ID is needed only for a user-level key that is not scoped to a workspace (the API replies that the request must include the `anthropic-workspace-id` header). It looks like `wrkspc_...`, is not a secret, and is sent as that header. A workspace-scoped key does not need it.
 - ANTHROPIC_MODEL sets the model for every agent. The default is claude-opus-5-5.
 - FOCUS_MODEL_<AGENT> overrides one agent, for example FOCUS_MODEL_EVIDENCE_READER, FOCUS_MODEL_DIRECTION_MAPPER, FOCUS_MODEL_GAP_PLANNER, FOCUS_MODEL_CV_TAILOR or FOCUS_MODEL_OUTREACH_WRITER. This is how to run the light agents on a cheaper model.
 

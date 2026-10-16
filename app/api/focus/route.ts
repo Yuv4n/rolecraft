@@ -34,7 +34,7 @@ export async function POST(request: Request) {
   if (raw === null) return fail(413, 'The request is too large.');
   try {
     const req = parseRequest(JSON.parse(raw));
-    const orchestrator = createOrchestrator({call: makeAnthropicCall(apiKey), modelFor});
+    const orchestrator = createOrchestrator({call: makeAnthropicCall(apiKey, getSecret('ANTHROPIC_WORKSPACE_ID')), modelFor});
     switch (req.action) {
       case 'discover':
         return Response.json(await orchestrator.discover(req.profile));
@@ -50,6 +50,9 @@ export async function POST(request: Request) {
     if (error instanceof ModelRefusal) return fail(422, 'The model declined this request. Try the offline engine.');
     if (error instanceof ModelTruncated || error instanceof ModelBadOutput) return fail(502, 'The analysis was cut short or unreadable. Try again.');
     if (error instanceof Anthropic.AuthenticationError) return fail(500, 'The server API key was rejected.');
+    if (error instanceof Anthropic.BadRequestError || error instanceof Anthropic.NotFoundError || error instanceof Anthropic.PermissionDeniedError) {
+      return fail(500, 'The analysis service rejected the server settings. The owner should check the API key, workspace ID and model name.');
+    }
     if (error instanceof Anthropic.RateLimitError) return fail(429, 'The analysis service is busy. Wait a moment and try again.');
     if (error instanceof Anthropic.APIConnectionError) return fail(502, 'Could not reach the analysis service.');
     return fail(502, 'The analysis could not be completed.');
