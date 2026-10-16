@@ -425,7 +425,7 @@ export function rate(cv: string, job: string | JobModel, analysis?: Analysis) {
               (a.matched.reduce((n, t) => n + a.weights[t], 0) / total) * 100,
             )
           : 0,
-      why: `${a.matched.length} of ${a.skills.length} recognised terms supported; ${a.unassessed.length} requirements need manual assessment. Required terms and unresolved required requirements count twice; preferred items count once. Unassessed requirements receive no automatic credit. This is evidence coverage, not an eligibility decision.`,
+      why: `${a.matched.length} of ${a.skills.length} recognised terms supported; ${a.unassessed.length} requirement${a.unassessed.length === 1 ? " needs" : "s need"} manual assessment. Required items count twice; preferred items count once. Unassessed requirements receive no automatic credit. This is evidence coverage, not an eligibility decision.`,
     },
     {
       name: "Evidence of impact",
