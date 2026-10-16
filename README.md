@@ -1,17 +1,19 @@
 # Rolecraft
 
+[Open the live demo](https://rolecraft.yuv4n-apps.workers.dev/)
+
 A hackathon CV studio built with React 19, TypeScript and Vinext on Vite. The server route deploys to Cloudflare Workers through Sites.
 
 ## Run locally
 
-Use Node.js 22.13 or later (Node 24 recommended).
+Use Node.js 24 or later. `.node-version` pins the CI major version.
 
 ```sh
 npm ci
 npm run dev
 ```
 
-Open the Local URL printed by Vite, usually http://127.0.0.1:5173. Click **Try a sample** to populate the CV and job description, then continue through the four steps. The sample also works without any external job website.
+Open the Local URL printed by Vite, usually http://127.0.0.1:5173. Click Try a sample to populate the CV and job description, then continue through the four steps. The sample also works without any external job website.
 
 ## Environment variables
 
@@ -20,14 +22,14 @@ None required. No AI provider keys are used. The demo uses deterministic matchin
 ## Checks
 
 ```sh
-npx tsc --noEmit
-node --experimental-strip-types tests/engine.test.mjs
-npm run build
+npm run check
+npm run build:cloudflare
+npm run benchmark
 ```
 
 ## Flow and architecture
 
-- PDF.js extracts text-based PDFs in the browser; Mammoth extracts DOCX text. Maximum upload size is 8 MB, with a 20-page PDF limit. Users can correct or paste text.
+- PDF.js extracts text-based PDFs in the browser; Bounded ZIP/XML extraction reads DOCX paragraphs, including Word list markers, headers and footers. Maximum upload size is 8 MB, with a 20-page PDF limit. Users can correct or paste text.
 - The public demo accepts pasted job descriptions. `/api/job` returns HTTP 410 without making outbound requests.
 - lib/engine.ts contains the requirement vocabulary, niche suggestions, evidence matching, conservative bullet rewrites and transparent scoring rubric.
 - Source and tailored text appear side by side. Rewritten and moved lines are highlighted. The final editor updates both exports and scores.
@@ -113,3 +115,28 @@ Regression tests cover short and paragraph-based CVs, empty-content scores,
 negation and affirmative clauses, grouped projects and PDF font coverage.
 Automated checks do not establish recruiter accuracy or accessibility compliance.
 Niche suggestions use predefined categories rather than live labour-market data.
+
+
+## Repository checks and performance
+
+`npm run check` runs TypeScript, regression tests, ESLint and formatting checks.
+`npm run format` formats the application page, styles and analysis modules.
+Generated TypeScript build metadata and vendored browser assets are excluded from
+source linting. CI cancels superseded checks and uses the same Node major version
+as local development.
+
+The job model is parsed once per description. CV line matches are reused across
+requirements, ratings and niche suggestions. The final editor updates its own
+evidence analysis and project recommendations. `npm run benchmark` exercises
+near-limit CV and job text locally; timings vary by hardware.
+
+Indented continuation lines move with their bullet. Ambiguous unindented
+continuations keep the source run in order. Conditional achievements retain their
+wording. Requirements involving licences, degrees or experience length are flagged
+for manual assessment and receive no automatic relevance credit. Scores with
+unassessed requirements are provisional. The engine cannot verify eligibility or
+truthfulness, and the vocabulary remains limited.
+
+DOCX extraction ignores deleted tracked-change text and rejects XML declarations.
+Expanded selected document parts are capped at 2 MB, and extracted text is capped
+at 30,000 characters. Scanned documents still require pasted text or external OCR.
