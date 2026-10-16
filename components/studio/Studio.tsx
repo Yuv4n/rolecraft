@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowRight, ClipboardCheck, Compass, FileDown, FileUp, Home, Layers, ListChecks, PanelRightOpen, RotateCcw, ShieldCheck, Sparkles, Target, Upload, X } from 'lucide-react';
+import { ArrowRight, Briefcase, ClipboardCheck, Compass, FileDown, FileUp, Home, Layers, ListChecks, PanelRightOpen, RotateCcw, ShieldCheck, Sparkles, Target, Upload, X } from 'lucide-react';
 import { sampleCV, sampleJob } from '../../lib/engine';
 import { wordCount, renderText } from '../../lib/cv/render';
 import { reduce, createWorkspace, effective, hasUnsavedWork, parseWorkspace } from '../../lib/cv/workspace';
@@ -10,6 +10,7 @@ import { StudioContext } from './context';
 import type { StudioApi, Workflow } from './context';
 import { DocPanel } from './DocPanel';
 import type { DocTab } from './DocPanel';
+import { CareersView } from './CareersView';
 import { PlanView } from './PlanView';
 import { ReviewView } from './ReviewView';
 import { RolesView } from './RolesView';
@@ -17,6 +18,7 @@ import { TailorView } from './TailorView';
 import { extractCvText, saveBlob } from './extract';
 
 const goals: { id: Exclude<Workflow, 'home'>; title: string; blurb: string; icon: typeof Target; short: string }[] = [
+  { id: 'careers', short: 'Careers', icon: Briefcase, title: 'Explore careers and find jobs', blurb: 'See the career paths, industries and specific roles your experience points to, with the reasoning, then get live job postings ranked against your CV.' },
   { id: 'tailor', short: 'Tailor', icon: Target, title: 'Tailor my CV to a specific role', blurb: 'Paste a job description or pick a saved role. See what you already evidence, what is missing, and the edits that would strengthen the application.' },
   { id: 'roles', short: 'Find roles', icon: Compass, title: 'Find roles that fit my CV', blurb: 'See the roles your CV supports today, the stretch roles worth a look, and the exact gaps for each.' },
   { id: 'plan', short: 'Plan', icon: ListChecks, title: 'Plan experience to strengthen my CV', blurb: 'Get projects, responsibilities and work experience ranked by likely impact, with the evidence each would add.' },
@@ -102,7 +104,7 @@ export default function Studio() {
         <div className="solo-wrap">
           <a className="brand" href="/"><span className="brand-icon"><Layers size={22} /></span>rolecraft<span className="brand-dot">.</span></a>
           <h1>What do you want your CV to do<span>?</span></h1>
-          <p className="lede">Rolecraft helps you tailor a CV to a role, find roles that fit, plan the experience you are missing, or review the CV you have. Every suggestion stays tied to what you actually wrote.</p>
+          <p className="lede">Rolecraft helps you explore careers and find postings, tailor a CV to a role, plan the experience you are missing, or review the CV you have. Every suggestion stays tied to what you actually wrote.</p>
           <Intake onCreate={(text, name, sample) => {
             let next = createWorkspace(text, name, Date.now());
             if (sample) {
@@ -180,10 +182,10 @@ export default function Studio() {
                 <section className="home">
                   <div className="kicker">Your CV is ready</div>
                   <h1>What would you like to do<span>?</span></h1>
-                  <p className="lede">Pick a starting point. You can switch at any time. Changes you accept, edits you make and the roles you save stay with you across all four.</p>
+                  <p className="lede">Pick a starting point. You can switch at any time, and the first one is the widest lens. Changes you accept, edits you make and the roles you save stay with you across all four.</p>
                   <div className="goal-grid">
                     {goals.map((g, i) => (
-                      <button key={g.id} className="goal-card" onClick={() => api.go(g.id)}>
+                      <button key={g.id} className={`goal-card ${i === 0 ? 'wide' : ''}`} onClick={() => api.go(g.id)}>
                         <span className="goal-icon"><g.icon size={22} /></span>
                         <span className="goal-num">0{i + 1}</span>
                         <h3>{g.title}</h3>
@@ -198,6 +200,7 @@ export default function Studio() {
                   </div>
                 </section>
               </div>
+              <div hidden={workflow !== 'careers'}><CareersView active={workflow === 'careers'} /></div>
               <div hidden={workflow !== 'tailor'}><TailorView active={workflow === 'tailor'} /></div>
               <div hidden={workflow !== 'roles'}><RolesView active={workflow === 'roles'} /></div>
               <div hidden={workflow !== 'plan'}><PlanView active={workflow === 'plan'} /></div>
