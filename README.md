@@ -31,18 +31,18 @@ npm run build
 - The public demo accepts pasted job descriptions. `/api/job` returns HTTP 410 without making outbound requests.
 - lib/engine.ts contains the requirement vocabulary, niche suggestions, evidence matching, conservative bullet rewrites and transparent scoring rubric.
 - Source and tailored text appear side by side. Rewritten and moved lines are highlighted. The final editor updates both exports and scores.
-- DOCX and PDF are generated locally with docx and jsPDF. CV files and text never go to the server and are not persisted. Refreshing clears the workspace.
+- DOCX and PDF are generated locally with docx and jsPDF. CV files and text never go to the server. By default, refreshing clears the workspace. Users can opt in to a local draft, stored only in this browser, and remove it from the interface.
 - All extracted content is rendered as text. Nothing in an uploaded CV or job posting is executed or treated as an instruction. There is no content logging.
 
 ## Known limits
 
-This is a working demo with bounded heuristics. The vocabulary includes product, analytics, operations, design and common software roles, with a small alias dictionary. It does not perform broad semantic understanding, verify facts, or infer unstated qualifications. Niche recommendations are exploratory. Indented and numbered bullets are recognised. Rewrites apply only to known grammatical forms; other wording is preserved. Scores measure term coverage and textual proxies; they are not hiring predictions or actual employer ATS scores. Scores require at least 40 words and a substantive bullet. Impact scoring requires both a number and an outcome verb; it still cannot verify the outcome. Negated and aspirational claims are excluded conservatively, which can miss valid evidence in complex sentences.
+This is a working demo with bounded heuristics. The vocabulary includes product, analytics, operations, design and common software roles, with a small alias dictionary. It does not perform broad semantic understanding, verify facts, or infer unstated qualifications. Niche recommendations are exploratory. Indented and numbered bullets are recognised. Rewrites apply only to known grammatical forms; other wording is preserved. Scores measure term coverage and textual proxies; they are not hiring predictions or actual employer ATS scores. Scores require at least 12 words, 60 letters and one statement of six words. Paragraphs and bullets are both accepted. Impact scoring requires both a number and an outcome verb; it still cannot verify the outcome. Negated and aspirational claims are excluded conservatively, which can miss valid evidence in complex sentences.
 
 Job URL fetching is disabled for the public demo. Add production egress controls and rate limiting before restoring it.
 
-Scanned PDFs need OCR outside this app. Complex layouts may extract out of order. Exports use a plain single-column layout. The PDF uses built-in Helvetica and supports Western text best; some Unicode characters may not render correctly. Review exports before sending. Downloads were exercised in the browser; DOCX text was re-extracted to check preservation.
+Scanned PDFs need OCR outside this app. Complex layouts may extract out of order. Exports use a plain single-column layout. PDF exports embed the openly licensed Noto Sans font. The exporter checks character coverage and directs users to DOCX if the text includes unsupported characters. Review exports before sending. Downloads were exercised in the browser; DOCX text was re-extracted to check preservation.
 
-No database, accounts, history, LLM integration or persistent uploads are included. The hosted Site is owner-private by default.
+No server database, accounts, LLM integration or persistent uploads are included. The standalone Cloudflare app is public. The separate Sites deployment remains owner-private by default.
 
 
 ## Public Cloudflare Workers deployment
@@ -84,6 +84,32 @@ with this check required before merging if deployments should wait for checks.
 Required and uncategorised terms receive twice the relevance weight of preferred
 terms. Short requirement lines are retained, and section headings determine the
 category rather than words within a requirement. The full gap list appears in
-Rating & priorities; project suggestions are limited to five so users can choose
-one manageable next step. Analysis is memoized and generation has no artificial
-waiting period. Refreshing still clears the browser workspace.
+Rating & priorities; related project suggestions are grouped and limited to five so users can choose
+one manageable next step. Each project cites the target requirements it addresses. Analysis is memoized and generation has no artificial
+waiting period. Draft storage is opt-in and local to the device.
+
+
+## Optional GitHub automatic deployment
+
+`.github/workflows/deploy.yml` deploys the exact main-branch commit that passed
+Verify Rolecraft. It never deploys pull-request code. It is disabled until the
+following repository settings exist:
+
+- Secret `CLOUDFLARE_API_TOKEN`: a Cloudflare API token scoped to the deployment
+  account with Workers Scripts Edit and Account Settings Read. Do not paste this
+  token into chat or commit it to source control.
+- Variable `CLOUDFLARE_ACCOUNT_ID`: the account ID used for Rolecraft.
+- Variable `CLOUDFLARE_DEPLOY_ENABLED`: `true`, after the secret is configured.
+
+Create the token in Cloudflare and enter it directly in GitHub Settings →
+Secrets and variables → Actions. The interactive Wrangler OAuth credential is
+not copied to GitHub. Keep the account on Workers Free. This workflow does not
+create subscriptions or enable paid storage services. If Workers Builds is used
+instead, leave the GitHub deployment switch disabled to avoid duplicate deploys.
+
+## Verification scope
+
+Regression tests cover short and paragraph-based CVs, empty-content scores,
+negation and affirmative clauses, grouped projects and PDF font coverage.
+Automated checks do not establish recruiter accuracy or accessibility compliance.
+Niche suggestions use predefined categories rather than live labour-market data.
