@@ -3,70 +3,88 @@
 import { useState } from 'react';
 import { ShieldCheck } from 'lucide-react';
 import type { Profile } from '../../lib/focus/types.ts';
-import './consent-outreach.css';
+import './consent.css';
 
 function Sent({ id, label, text }: { id: string; label: string; text: string }) {
   return (
-    <div className="focus-sent-field">
-      <div className="focus-sent-head">
-        <h4 id={id}>{label}</h4>
-        <span className="focus-count">{text.length.toLocaleString()} characters</span>
+    <details className="disclosure">
+      <summary>
+        <span id={id}>{label}</span>
+        <span className="consent-count">{text.length.toLocaleString()} {text.length === 1 ? 'character' : 'characters'}</span>
+      </summary>
+      <div className="disclosure__body">
+        <pre className="consent-pre" tabIndex={0} aria-label={`${label} that will be sent`}>
+          {text.length > 0 ? text : '(empty)'}
+        </pre>
       </div>
-      <pre className="focus-pre" tabIndex={0} aria-labelledby={id}>
-        {text.length > 0 ? text : '(empty)'}
-      </pre>
-    </div>
+    </details>
   );
 }
 
-export function ConsentPanel(props: { profile: Profile; onAccept: () => void; onUseOffline: () => void }) {
-  const { profile, onAccept, onUseOffline } = props;
+export function ConsentPanel(props: { profile: Profile; onAccept: () => void; onUseOffline: () => void; onBack: () => void }) {
+  const { profile, onAccept, onUseOffline, onBack } = props;
   // The checkbox is tied to the exact text it was ticked for, so any edit clears it.
   const signature = JSON.stringify([profile.cv, profile.projects, profile.interests, profile.hoursPerWeek, profile.applyBy]);
   const [ackedFor, setAckedFor] = useState<string | null>(null);
   const checked = ackedFor === signature;
 
   return (
-    <section className="card focus-consent" aria-labelledby="focus-consent-title">
-      <span className="section-kicker">BEFORE WE ANALYSE</span>
-      <h2 id="focus-consent-title">Review what will be sent</h2>
+    <section className="consent-panel" aria-labelledby="consent-title">
+      <h2 id="consent-title">Before we send anything</h2>
       <p>
-        Analysis sends the text below to Anthropic&apos;s API through this app&apos;s server. The server does not log or
-        store it. Nothing else is sent: not your file, not the name of your file, and not data from your browser.
+        The text below will be sent to Anthropic&apos;s API through this app&apos;s server for analysis. The server does
+        not log or store it. Nothing else is sent. That includes your file, its name and data from your browser.
       </p>
 
-      <Sent id="focus-sent-cv" label="CV text" text={profile.cv} />
-      <Sent id="focus-sent-projects" label="Projects" text={profile.projects} />
-      <Sent id="focus-sent-interests" label="Interests" text={profile.interests} />
-
-      <div className="focus-sent-meta">
-        <div>
-          <h4 id="focus-sent-hours">Hours per week</h4>
-          <pre className="focus-pre" aria-labelledby="focus-sent-hours">{String(profile.hoursPerWeek)}</pre>
-        </div>
-        <div>
-          <h4 id="focus-sent-date">Apply-by date</h4>
-          <pre className="focus-pre" aria-labelledby="focus-sent-date">{profile.applyBy || '(empty)'}</pre>
+      <div className="card">
+        <h3 className="card__title">What will be sent</h3>
+        <div className="consent-list">
+          <Sent id="consent-cv" label="CV text" text={profile.cv} />
+          <Sent id="consent-projects" label="Projects" text={profile.projects} />
+          <Sent id="consent-interests" label="Interests" text={profile.interests} />
+          <dl className="consent-meta">
+            <div>
+              <dt>Hours per week</dt>
+              <dd>{profile.hoursPerWeek}</dd>
+            </div>
+            <div>
+              <dt>Apply-by date</dt>
+              <dd>{profile.applyBy || '(empty)'}</dd>
+            </div>
+          </dl>
         </div>
       </div>
 
-      <label className="focus-check">
-        <input type="checkbox" checked={checked} onChange={(e) => setAckedFor(e.target.checked ? signature : null)} required />
+      <label className="check">
+        <input type="checkbox" checked={checked} onChange={(e) => setAckedFor(e.target.checked ? signature : null)} />
         <span>I understand this text will be sent for analysis</span>
       </label>
 
-      <div className="focus-actions">
-        <button type="button" className="primary" disabled={!checked} onClick={onAccept}>
-          <ShieldCheck size={14} aria-hidden="true" /> Send and analyse
+      <div className="consent-actions">
+        <button
+          type="button"
+          className="btn btn--primary"
+          disabled={!checked}
+          aria-describedby={checked ? undefined : 'consent-hint'}
+          onClick={onAccept}
+        >
+          <ShieldCheck size={18} aria-hidden="true" /> Send and analyse
         </button>
-        <button type="button" className="secondary" onClick={onUseOffline}>
+        {!checked && <span className="consent-hint" id="consent-hint">Tick the box to continue.</span>}
+      </div>
+
+      <div className="consent-offline">
+        <button type="button" className="btn btn--secondary" aria-describedby="consent-offline-note" onClick={onUseOffline}>
           Use the offline engine instead
         </button>
+        <p id="consent-offline-note">Stays in your browser. It understands a limited vocabulary.</p>
       </div>
-      <p className="focus-offline-note">
-        The offline engine keeps everything in the browser. It understands a limited vocabulary, so it will miss
-        skills and roles that it has no word for.
-      </p>
+
+      <div className="consent-actions">
+        <button type="button" className="btn btn--ghost" onClick={onBack}>
+          Back to edit
+        </button>
+      </div>
     </section>
   );
 }

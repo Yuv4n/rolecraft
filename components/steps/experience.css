@@ -1,0 +1,68 @@
+.exp-step > * + * { margin-top: var(--s-4); }
+
+.exp-samples {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2) var(--s-3);
+}
+.exp-samples__label { font-size: var(--text-sm); color: var(--text-muted); font-weight: 600; }
+.exp-samples .btn { flex: 0 1 auto; text-align: center; }
+
+.exp-card__title { margin-bottom: var(--s-4); }
+
+.exp-drop {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-1);
+  min-height: 8rem;
+  padding: var(--s-5) var(--s-4);
+  border: 2px dashed var(--control-border);
+  border-radius: var(--radius);
+  background: var(--tint-50);
+  text-align: center;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+.exp-drop:hover { background: var(--tint-100); border-color: var(--green); }
+.exp-drop:focus-within { outline: var(--focus); outline-offset: 3px; border-color: var(--green); }
+.exp-drop.is-over { background: var(--tint-200); border-color: var(--green); border-style: solid; }
+.exp-drop.is-busy { cursor: progress; }
+.exp-drop.is-loaded { background: var(--ok-bg); border-color: var(--ok-border); border-style: solid; color: var(--ok-ink); }
+.exp-drop__icon { color: var(--green); }
+.exp-drop__title { font-weight: 650; overflow-wrap: anywhere; }
+.exp-drop__hint { font-size: var(--text-sm); color: var(--text-muted); }
+.exp-drop.is-loaded .exp-drop__hint { color: var(--ok-ink); }
+
+.exp-cv { margin-top: var(--s-5); }
+
+.exp-hours {
+  display: flex;
+  align-items: center;
+  gap: var(--s-4);
+}
+.exp-hours .range { flex: 1; min-width: 0; }
+.exp-hours output {
+  flex: none;
+  min-width: 4.5rem;
+  text-align: right;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.exp-budget { margin-top: var(--s-5); padding: var(--s-3) var(--s-4); border-radius: var(--radius); background: var(--tint-100); font-size: 0.9375rem; }
+
+.exp-privacy {
+  display: flex;
+  gap: var(--s-3);
+  align-items: flex-start;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+.exp-privacy svg { flex: none; margin-top: 2px; color: var(--green); }
+
+@media (min-width: 721px) {
+  .exp-date { max-width: 16rem; }
+}

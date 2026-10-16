@@ -1,0 +1,42 @@
+/* Outreach and next action. Classes are prefixed out- and next-. Tokens come from app/globals.css. */
+
+.out-form-row { display: grid; grid-template-columns: 1fr; gap: var(--s-5); }
+.out-form-row .field { margin-top: 0; }
+@media (min-width: 720px) {
+  .out-form-row { grid-template-columns: 1fr 1fr; }
+}
+.out-form .field { margin-top: var(--s-5); }
+.out-form .out-form-row + .field { margin-top: var(--s-5); }
+.out-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-3); margin-top: var(--s-5); }
+
+.out-alert { margin-top: var(--s-4); }
+
+.out-preview { margin-top: var(--s-4); }
+.out-preview__subject {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2) var(--s-4);
+  padding: var(--s-3) var(--s-4);
+  margin-bottom: var(--s-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+}
+.out-preview__label { font-size: var(--text-sm); font-weight: 650; color: var(--text-muted); }
+.out-preview__value { font-weight: 600; overflow-wrap: anywhere; }
+.out-body { min-height: 14rem; line-height: 1.6; }
+.out-copy-status { font-size: 0.9375rem; color: var(--ok-ink); min-height: 1.5em; }
+
+.out-claims { list-style: none; padding: 0; margin: 0; }
+.out-claims > li { padding-top: var(--s-4); margin-top: var(--s-4); border-top: 1px solid var(--border); }
+.out-claims > li:first-child { padding-top: 0; margin-top: 0; border-top: 0; }
+.out-claims__sentence { margin-bottom: var(--s-2); }
+.out-claims .quote { margin-top: var(--s-2); }
+
+.next-task__title { margin-top: var(--s-3); }
+.next-task__meta { margin-top: var(--s-2); }
+.next-details { margin: var(--s-4) 0 0; }
+.next-details dt { font-weight: 650; font-size: 0.9375rem; }
+.next-details dd { margin: var(--s-1) 0 0; }
+.next-details dd + dt { margin-top: var(--s-3); }
+.next-days { margin-top: var(--s-4); font-size: 0.9375rem; color: var(--text-muted); }

@@ -1,7 +1,8 @@
 'use client';
 
-import './steps.css';
-import {ArrowRight, CheckCircle2, ShieldCheck, Upload} from 'lucide-react';
+import './experience.css';
+import {useState} from 'react';
+import {CheckCircle2, ShieldCheck, Upload} from 'lucide-react';
 
 type Props = {
   cv: string;
@@ -17,97 +18,186 @@ type Props = {
   filename: string;
   busy: string;
   live: boolean | null;
+  errors: Partial<Record<'cv' | 'hours' | 'applyBy', string>>;
+  weeks: number;
   onUpload: (file?: File) => void;
-  onContinue: () => void;
+  onSample: (kind: 'product' | 'clinical') => void;
 };
 
+function describedBy(...ids: (string | false | undefined)[]) {
+  const out = ids.filter(Boolean).join(' ');
+  return out || undefined;
+}
+
 export function ExperienceStep(p: Props) {
-  const validDate = /^\d{4}-\d{2}-\d{2}$/.test(p.applyBy);
-  const ready = p.cv.trim().length >= 80 && validDate && p.hours >= 1 && p.hours <= 40 && !p.busy;
+  const [over, setOver] = useState(false);
+  const reading = p.busy !== '';
+  const loaded = !reading && p.filename !== '';
+  const total = p.hours * p.weeks;
+
   return (
-    <div className="input-grid">
-      <section className="card">
-        <div className="section-kicker">STEP 01 / YOUR EXPERIENCE</div>
-        <h2>Start with what you have</h2>
-        <p className="muted">Add your CV, anything you are working on, and the time you can give. The rest of the flow is built from this.</p>
+    <div className="exp-step">
+      <div className="exp-samples">
+        <span className="exp-samples__label" id="exp-samples-label">No CV to hand?</span>
+        <button type="button" className="btn btn--secondary btn--sm" aria-describedby="exp-samples-label" onClick={() => p.onSample('product')}>
+          Try a product analyst example
+        </button>
+        <button type="button" className="btn btn--secondary btn--sm" aria-describedby="exp-samples-label" onClick={() => p.onSample('clinical')}>
+          Try a nurse moving into data example
+        </button>
+      </div>
 
-        <label className="drop" onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); p.onUpload(e.dataTransfer.files[0]); }}>
-          <div className="upload-icon"><Upload size={24} /></div>
-          <h3>{p.filename || 'Drop your CV here'}</h3>
-          <p>or <span>browse files</span> to get started</p>
-          <small>PDF or DOCX · Up to 8 MB · Text-based documents</small>
-          <input type="file" accept=".pdf,.docx" aria-label="Upload CV" onChange={(e) => p.onUpload(e.target.files?.[0])} />
+      <section className="card" aria-labelledby="exp-cv-title">
+        <h2 id="exp-cv-title" className="exp-card__title">Your CV</h2>
+
+        <label
+          className={`exp-drop${over ? ' is-over' : ''}${reading ? ' is-busy' : ''}${loaded ? ' is-loaded' : ''}`}
+          onDragOver={(e) => { e.preventDefault(); setOver(true); }}
+          onDragLeave={() => setOver(false)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setOver(false);
+            p.onUpload(e.dataTransfer.files[0]);
+          }}
+        >
+          <input
+            type="file"
+            className="visually-hidden"
+            accept=".pdf,.docx"
+            aria-describedby="exp-drop-status"
+            onChange={(e) => {
+              p.onUpload(e.target.files?.[0]);
+              e.target.value = '';
+            }}
+          />
+          {reading ? (
+            <>
+              <span className="spinner exp-drop__icon" aria-hidden="true" />
+              <span className="exp-drop__title">{p.busy}</span>
+            </>
+          ) : loaded ? (
+            <>
+              <CheckCircle2 size={28} aria-hidden="true" />
+              <span className="exp-drop__title">{p.filename}</span>
+              <span className="exp-drop__hint">Read from your file. Check it below.</span>
+            </>
+          ) : (
+            <>
+              <Upload className="exp-drop__icon" size={28} aria-hidden="true" />
+              <span className="exp-drop__title">Drop your CV here or choose a file</span>
+              <span className="exp-drop__hint">PDF or DOCX, up to 8 MB, text-based</span>
+            </>
+          )}
         </label>
+        <span id="exp-drop-status" className="visually-hidden" role="status">
+          {reading ? p.busy : loaded ? `${p.filename} read. Check the text below.` : ''}
+        </span>
 
-        <div className="field-heading">
-          <label htmlFor="cv">{p.cv ? 'Review your extracted text' : 'Or paste your CV text'}</label>
-          <span>{p.cv.length.toLocaleString()} / 30,000</span>
-        </div>
-        <textarea id="cv" value={p.cv} maxLength={30000} onChange={(e) => p.setCV(e.target.value)} placeholder="Your name, experience, education and skills…" rows={p.cv ? 12 : 4} />
-        <p className="field-help">Check headings, dates and bullet breaks before continuing. You can edit everything here.</p>
-
-        <div className="field-heading">
-          <label htmlFor="projects">Projects you are working on (optional)</label>
-          <span>{p.projects.length} / 4,000</span>
-        </div>
-        <textarea id="projects" value={p.projects} maxLength={4000} rows={3} onChange={(e) => p.setProjects(e.target.value)} placeholder="Side projects, volunteering, coursework. Include what each one is and what you did." />
-
-        <div className="field-heading">
-          <label htmlFor="interests">Interests (optional)</label>
-          <span>{p.interests.length} / 1,500</span>
-        </div>
-        <textarea id="interests" value={p.interests} maxLength={1500} rows={2} onChange={(e) => p.setInterests(e.target.value)} placeholder="Topics or kinds of work you want more of." />
-
-        <div className="focus-time-grid">
-          <div>
-            <label htmlFor="hours">Hours per week you can spare</label>
-            <div className="focus-hours-row">
-              <input id="hours" type="range" min={1} max={40} value={p.hours} onChange={(e) => p.setHours(Number(e.target.value))} />
-              <output htmlFor="hours">{p.hours}h</output>
-            </div>
+        <div className="field exp-cv">
+          <label className="field__label" htmlFor="cv">CV text</label>
+          <span className="field__hint" id="cv-hint">Check headings, dates and bullets. You can edit everything here.</span>
+          <textarea
+            id="cv"
+            className="textarea field__control"
+            value={p.cv}
+            maxLength={30000}
+            rows={p.cv ? 12 : 5}
+            onChange={(e) => p.setCV(e.target.value)}
+            aria-invalid={p.errors.cv ? true : undefined}
+            aria-describedby={describedBy('cv-hint', p.errors.cv && 'cv-error', 'cv-count')}
+          />
+          {p.errors.cv && <p className="field__error" id="cv-error">{p.errors.cv}</p>}
+          <div className="field__meta" id="cv-count">
+            <span>{p.cv.length.toLocaleString()} / 30,000</span>
           </div>
-          <div>
-            <label htmlFor="apply-by">Start applying by</label>
-            <input id="apply-by" type="date" value={p.applyBy} onChange={(e) => p.setApplyBy(e.target.value)} />
-          </div>
-        </div>
-
-        <div className="card-footer">
-          <span>
-            <ShieldCheck size={14} />{' '}
-            {p.live === false
-              ? 'Offline engine: everything stays in your browser.'
-              : 'Files are read in your browser. Text is sent for analysis only after you agree.'}
-          </span>
-          <button disabled={!ready} className="primary" onClick={p.onContinue}>
-            Find my direction <ArrowRight size={16} />
-          </button>
         </div>
       </section>
 
-      <div className="right-column">
-        <div className="expect">
-          <h3>What you get</h3>
-          {[
-            ['01', 'Three directions', 'A best fit, an adjacent field and a stretch, each backed by quotes from your own text, with the gaps stated.'],
-            ['02', 'A plan that fits your hours', 'Tasks sized to your weekly time. What does not fit is listed separately.'],
-            ['03', 'A tailored CV', 'Your own wording, tightened for the direction you choose. No new facts are added.'],
-            ['04', 'One email to send', 'A short draft built from a line of your CV and a line from the company.'],
-          ].map(([n, t, d]) => (
-            <div className="expect-row" key={n}>
-              <span>{n}</span>
-              <div>
-                <h4>{t}</h4>
-                <p>{d}</p>
-              </div>
-            </div>
-          ))}
+      <section className="card" aria-labelledby="exp-more-title">
+        <h2 id="exp-more-title" className="exp-card__title">Anything else we should know?</h2>
+        <div className="field">
+          <label className="field__label" htmlFor="projects">
+            Projects you are working on <span className="field__optional">(optional)</span>
+          </label>
+          <span className="field__hint" id="projects-hint">
+            Side projects, volunteering or coursework. Say what each one is and what you did.
+          </span>
+          <textarea
+            id="projects"
+            className="textarea field__control"
+            value={p.projects}
+            maxLength={4000}
+            rows={4}
+            onChange={(e) => p.setProjects(e.target.value)}
+            aria-describedby="projects-hint projects-count"
+          />
+          <div className="field__meta" id="projects-count"><span>{p.projects.length.toLocaleString()} / 4,000</span></div>
         </div>
-        <div className="notice">
-          <CheckCircle2 size={18} />
-          <p>Scores and matches are guidance for revising your CV. They do not predict whether anyone will hire you.</p>
+        <div className="field">
+          <label className="field__label" htmlFor="interests">
+            Interests <span className="field__optional">(optional)</span>
+          </label>
+          <span className="field__hint" id="interests-hint">Kinds of work or topics you want more of.</span>
+          <textarea
+            id="interests"
+            className="textarea field__control"
+            value={p.interests}
+            maxLength={1500}
+            rows={3}
+            onChange={(e) => p.setInterests(e.target.value)}
+            aria-describedby="interests-hint interests-count"
+          />
+          <div className="field__meta" id="interests-count"><span>{p.interests.length.toLocaleString()} / 1,500</span></div>
         </div>
-      </div>
+      </section>
+
+      <section className="card" aria-labelledby="exp-time-title">
+        <h2 id="exp-time-title" className="exp-card__title">Your time</h2>
+        <div className="field">
+          <label className="field__label" htmlFor="hours">Hours you can spare each week</label>
+          <div className="exp-hours field__control">
+            <input
+              id="hours"
+              type="range"
+              className="range"
+              min={1}
+              max={40}
+              value={p.hours}
+              onChange={(e) => p.setHours(Number(e.target.value))}
+              aria-invalid={p.errors.hours ? true : undefined}
+              aria-describedby={describedBy(p.errors.hours && 'hours-error')}
+            />
+            <output htmlFor="hours">{p.hours} {p.hours === 1 ? 'hour' : 'hours'}</output>
+          </div>
+          {p.errors.hours && <p className="field__error" id="hours-error">{p.errors.hours}</p>}
+        </div>
+        <div className="field">
+          <label className="field__label" htmlFor="apply-by">Date you want to start applying</label>
+          <span className="field__hint" id="apply-by-hint">For example, six weeks from today.</span>
+          <input
+            id="apply-by"
+            type="date"
+            className="input field__control exp-date"
+            value={p.applyBy}
+            onChange={(e) => p.setApplyBy(e.target.value)}
+            aria-invalid={p.errors.applyBy ? true : undefined}
+            aria-describedby={describedBy('apply-by-hint', p.errors.applyBy && 'apply-by-error')}
+          />
+          {p.errors.applyBy && <p className="field__error" id="apply-by-error">{p.errors.applyBy}</p>}
+        </div>
+        <p className="exp-budget" aria-live="polite">
+          That is about {total} {total === 1 ? 'hour' : 'hours'} over {p.weeks} {p.weeks === 1 ? 'week' : 'weeks'}.
+        </p>
+      </section>
+
+      <p className="exp-privacy">
+        <ShieldCheck size={18} aria-hidden="true" />
+        <span>
+          {p.live === false
+            ? 'Everything stays in your browser. The offline engine matches your text to a fixed list of roles with keywords.'
+            : 'Your file is read in your browser. If live analysis is available, you will see exactly what will be sent and must agree before anything leaves your browser.'}
+        </span>
+      </p>
     </div>
   );
 }

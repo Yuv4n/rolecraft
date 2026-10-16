@@ -1,0 +1,50 @@
+/* Tailored CV step. Classes are prefixed cv-. Tokens come from app/globals.css. */
+
+.cv-summary__score { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--s-2) var(--s-4); }
+.cv-summary__figure { font-family: var(--font-head); font-size: var(--text-xl); font-weight: 700; }
+.cv-summary__note { margin-top: var(--s-2); color: var(--text-muted); font-size: 0.9375rem; }
+.cv-summary__actions { display: flex; flex-wrap: wrap; gap: var(--s-3); margin-top: var(--s-4); }
+
+.cv-meter { display: block; width: 100%; height: 0.875rem; margin-top: var(--s-2); accent-color: var(--green); }
+.cv-meter-row { margin-top: var(--s-3); }
+.cv-meter-row__text { display: flex; justify-content: space-between; gap: var(--s-3); font-size: var(--text-sm); color: var(--text-muted); }
+
+.cv-section { margin-top: var(--s-5); }
+.cv-url-row { display: flex; flex-wrap: wrap; gap: var(--s-3); align-items: stretch; margin-top: var(--s-2); }
+.cv-url-row .input { flex: 1 1 16rem; width: auto; }
+
+.cv-panes { display: grid; grid-template-columns: 1fr; gap: var(--s-4); margin-top: var(--s-4); }
+.cv-panes .card + .card { margin-top: 0; }
+@media (min-width: 960px) {
+  .cv-panes { grid-template-columns: 1fr 1fr; }
+}
+.cv-pane__text {
+  max-height: 28rem;
+  overflow: auto;
+  padding: var(--s-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.cv-line { padding-left: var(--s-3); border-left: 4px solid transparent; min-height: 1.6em; }
+.cv-line--changed { border-left-color: var(--green); background: var(--ok-bg); }
+
+.cv-changes { list-style: none; padding: 0; margin: 0; }
+.cv-changes > li { padding-top: var(--s-4); margin-top: var(--s-4); border-top: 1px solid var(--border); }
+.cv-changes > li:first-child { padding-top: 0; margin-top: 0; border-top: 0; }
+.cv-changes__revised { margin-top: var(--s-2); font-weight: 600; }
+.cv-changes__why { margin-top: var(--s-1); color: var(--text-muted); font-size: 0.9375rem; }
+
+.cv-scores { display: grid; grid-template-columns: 1fr; gap: var(--s-4); }
+.cv-scores .card + .card { margin-top: 0; }
+@media (min-width: 640px) {
+  .cv-scores { grid-template-columns: 1fr 1fr; }
+}
+.cv-score__figure { font-family: var(--font-head); font-size: var(--text-xl); font-weight: 700; }
+.cv-score__was { margin-left: var(--s-2); font-size: var(--text-sm); font-weight: 400; color: var(--text-muted); }
+.cv-next { margin-top: var(--s-4); }
+.cv-next li + li { margin-top: var(--s-3); }
