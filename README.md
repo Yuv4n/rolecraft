@@ -7,23 +7,25 @@ A CV studio that runs entirely in the browser: load a CV, explore careers, tailo
 ## What it does
 
 - **Explore careers:** paths, industries and roles ranked by fit, each justified with quoted CV lines.
-- **Tailor to a role:** paste a job description for requirement-by-requirement evidence and word-level proposed edits. Missing facts become questions, not invented claims.
-- **Plan experience:** roles grouped as ready, stretch or low overlap, with the specific gaps.
+- **Tailor to a role:** paste a job description for requirement-by-requirement evidence and word-level proposed edits. Edits that need a fact ask for it and use only your answer; nothing is invented.
+- **Plan experience:** roles grouped as ready, stretch or low overlap with the specific gaps, and projects ranked by how much demand they cover.
 - **Review and export:** 15 checks feed six weighted score groups with every deduction shown; PDF, DOCX and text exports share one render model, and versions are immutable snapshots.
 
 ## Engineering
 
-- **Deterministic:** fixed vocabulary and negation-aware matching ("Learning SQL" is not SQL experience), so results are repeatable.
+- **Deterministic and explainable:** fixed vocabulary and negation-aware matching ("Learning SQL" is not SQL experience), so results are repeatable. Scores are revision guidance, not hiring predictions.
 - **Private:** parsing, scoring and export run client-side.
 - **Model:** CV content and layout are separate (`lib/cv/types.ts`, tested in `tests/model.test.mjs`).
-- **Untrusted input:** bounded DOCX extraction (2 MB expanded, no DTDs), PDFs capped at 20 pages, uploaded text only rendered as text. See [SECURITY.md](SECURITY.md).
+- **Untrusted input:** bounded DOCX extraction (2 MB expanded, no DTDs, 30,000 characters), PDFs capped at 20 pages, uploaded text only rendered as text. See [SECURITY.md](SECURITY.md).
 - **CI:** typecheck, eight test suites, lint, formatting, dependency audit and production build on every push.
 
-Stack: React 19, TypeScript, Next.js app router on Vite, PDF.js, jsPDF, docx.
+![Career paths with evidence quoted from the CV](docs/careers.png)
+
+Stack: React 19, TypeScript, Next.js app router on Vite (vinext), Cloudflare Workers config, PDF.js, jsPDF, docx.
 
 ## Run
 
-Node.js 24+. No environment variables; there is no hosted demo.
+Node.js 24+. No environment variables; there is no hosted demo. The app makes no outbound requests and the Worker config has no bindings or secrets, so deploying it would cost nothing to run.
 
 ```sh
 npm ci
